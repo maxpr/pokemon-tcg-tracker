@@ -1,8 +1,9 @@
-flask-bootstrap
-wtforms
+WTForms==3.0.1
 gunicorn
-flask-appconfig>=0.10
-flask-nav
-flask-debug
-flask-wtf
 itsdangerous==2.0.1
+Flask==2.1.1
+Flask-Bootstrap==3.3.7.1
+Flask-Debug==0.4.3
+flask-nav==0.6
+Flask-WTF==1.0.0
+pandas

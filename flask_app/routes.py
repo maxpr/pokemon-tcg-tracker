@@ -24,20 +24,7 @@ frontend = Blueprint('frontend', __name__)
 nav.register_element('frontend_top', Navbar(
     View('Flask-Bootstrap', '.index'),
     View('Home', '.index'),
-    View('Extensions', '.extensions_list'),
-    Subgroup(
-        'Docs',
-        Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
-        Link('Flask-AppConfig', 'https://github.com/mbr/flask-appconfig'),
-        Link('Flask-Debug', 'https://github.com/mbr/flask-debug'),
-        Separator(),
-        Text('Bootstrap'),
-        Link('Getting started', 'http://getbootstrap.com/getting-started/'),
-        Link('CSS', 'http://getbootstrap.com/css/'),
-        Link('Components', 'http://getbootstrap.com/components/'),
-        Link('Javascript', 'http://getbootstrap.com/javascript/'),
-        Link('Customize', 'http://getbootstrap.com/customize/'), ),
-    Text('Using Flask-Bootstrap {}'.format(FLASK_BOOTSTRAP_VERSION)), ))
+    View('Extensions', '.extensions_list')))
 
 
 @frontend.route('/')
@@ -55,19 +42,6 @@ def extensions_list():
 def extension_details(name):
     print(name+".csv")
     return render_template('extension_details.html', ext=pd.read_csv(f"dummy_data/{name}.csv"))
-
-
-@frontend.after_request
-def add_header(r):
-    """
-    Add headers to both force latest IE rendering engine or Chrome Frame,
-    and also to cache the rendered page for 10 minutes.
-    """
-    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    r.headers["Pragma"] = "no-cache"
-    r.headers["Expires"] = "0"
-    r.headers['Cache-Control'] = 'public, max-age=0'
-    return r
 
 @frontend.route('/data_post', methods=['POST'])
 def data_post():

@@ -1,14 +1,10 @@
 from flask import Flask
-from flask_appconfig import AppConfig
 from flask_bootstrap import Bootstrap
 
 from routes import frontend
 from nav import nav
 
 server = Flask(__name__)
-
-# We use Flask-Appconfig here, but this is not a requirement
-AppConfig(server)
 
 Bootstrap(server)
 
