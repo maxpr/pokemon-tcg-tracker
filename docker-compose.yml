@@ -31,3 +31,9 @@ services:
       interval: 2s
       timeout: 2s
       retries: 16
+  
+  scraper_worker:
+    build: ./pokemon_data_scraper
+    volumes:
+      - ./pokemon_data_scraper:/deploy/pokemon_data_scraper
+    
