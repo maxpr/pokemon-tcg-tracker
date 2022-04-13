@@ -3,19 +3,21 @@ set -e
 clickhouse client -n <<-EOSQL
     CREATE DATABASE IF NOT EXISTS pokemon;
     CREATE TABLE IF NOT EXISTS pokemon.extensions(
+        serieName String,
         extensionName String,
-        serie String,
         extensionCode String,
         extensionUrl String,
         extensionImageUrl String,
-        extensionReleaseData DateTime('Asia/Singapore')
+        extensionReleaseDate DateTime('Asia/Singapore'),
+        extensionCardNumber UInt8
     ) ENGINE = ReplacingMergeTree()
-    ORDER BY (extensionName, serie);
+    ORDER BY (serieName ,extensionName);
 
     CREATE TABLE IF NOT EXISTS pokemon.cardList(
         cardName String,
         cardExtensionCode String,
         cardNumber UInt8,
+        cardImageUrl String,
         cardRarity String
     ) ENGINE = ReplacingMergeTree()
     ORDER BY (cardName, cardExtensionCode);
@@ -47,3 +49,4 @@ clickhouse client -n <<-EOSQL
         cardNumberOwned UInt8
     ) ENGINE = ReplacingMergeTree()
     ORDER BY (timestampCollection);
+EOSQL
