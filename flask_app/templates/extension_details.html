@@ -24,7 +24,7 @@
  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
  <div class="container">
-    <span >Pokemon extension NAME CODE</span>
+    <p>Pokemon extension: {{ext_name}}, Code: {{ ext_code }}</p>
     <div class="row">
        <div>
           <!-- Adding bootstrap table classes to style a table-->
@@ -33,6 +33,7 @@
                 <tr>
                    <th scope="col">Number</th>
                    <th scope="col">Name</th>
+                    <th scope="col">Japanese Name</th>
                 </tr>
              </thead>
 
@@ -40,7 +41,12 @@
                {% for odx, row in ext.iterrows() %}
                <tr>
                    <td> <a class="btn" rel="popover" data-img={{ row['cardImageUrl'] }}> {{ row['cardNumber'] }} </a></td>
-                   <td><input type="checkbox" name="id" onChange="handleChange()">{{ row['cardName'] }}</td>
+                   {% if row['owned'] %}
+                   <td><input type="checkbox" name="id" onChange="handleChange(this, '{{ row['cardName'] }}', {{ row['cardNumber'] }}, '{{ ext_code }}')" checked> {{ row['cardName'] }}</td>
+                   {% else %}
+                   <td><input type="checkbox" name="id" onChange="handleChange(this, '{{ row['cardName'] }}', {{ row['cardNumber'] }}, '{{ ext_code }}')"> {{ row['cardName'] }}</td>
+                   {% endif %}
+                   <td> <p>{{ row['cardJapaneseName'] }}</p></td>
                </tr>
                {% endfor %}
              </tbody>
@@ -62,7 +68,7 @@
    html: true,
    trigger: 'hover',
    placement: 'auto right',
-   content: function(){return '<img src="'+$(this).data('img') + '" style="width:300px;height:500px;"/>';}
+   content: function(){return '<img src="'+$(this).data('img') + '" style="width:360px;height:500px;"/>';}
    });
 </script>
 
@@ -85,10 +91,13 @@
         }
     }
 
-      function handleChange(){
+      function handleChange(sel, cardName, cardNumber, cardExtensionCode){
              $.ajax({
                  url: "{{ url_for('frontend.data_post') }}",
                  method: "POST",
+                 contentType: "application/json",
+                 dataType: 'json',
+                 data: JSON.stringify( {"cardName": cardName, "cardNumber": cardNumber, "cardExtensionCode": cardExtensionCode, "owned": sel.checked})
              });
          }
  </script>

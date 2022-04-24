@@ -7,9 +7,11 @@
 from clickhouse_driver import Client
 from flask import Blueprint, render_template, flash, redirect, url_for
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
+
+from pokemon_data_scraper.src.db.db_connector import DBHandler
 from pokemon_data_scraper.src.logger.logging import LOGGER
 from nav import nav
-
+from flask import request
 
 frontend = Blueprint('frontend', __name__)
 
@@ -27,22 +29,24 @@ def index():
     return render_template('index.html')
 
 
-# TODO: have extensions in table sorted by release date
+# TODO: extensions progress
 @frontend.route('/extensions')
 def extensions_list():
-    client = Client('db_server')
-    return render_template('extensions_list.html', extensions_df=client.query_dataframe(f"SELECT extensionName, extensionCode, extensionImageUrl, extensionCardNumber, toDate(extensionReleaseDate) FROM pokemon.extensions ORDER BY extensionReleaseDate DESCENDING"))
+    client = DBHandler('db_server')
+    return render_template('extensions_list.html', extensions_df=client.get_all_extensions_for_ui())
 
 
 # TODO: have extensions in table sorted by release date
-@frontend.route('/extension/<code>')
-def extension_details(code):
-    client = Client('db_server')
-    return render_template('extension_details.html', ext=client.query_dataframe(f"SELECT cardName, cardImageUrl, cardNumber  FROM pokemon.cardList WHERE cardExtensionCode='{code}' ORDER BY cardNumber ASCENDING"))
+@frontend.route('/extension/<name_code>')
+def extension_details(name_code: str):
+    client = DBHandler('db_server')
+    return render_template('extension_details.html', ext_name=name_code.split("_")[1], ext_code=name_code.split("_")[0], ext=client.get_card_list_for_extension(name_code.split("_")[0]))
 
 
 @frontend.route('/data_post', methods=['POST'])
 def data_post():
     # handle your database access, etc.
-    LOGGER.info("TOTOA")
+    LOGGER.info(f"TOTOA {request.json}")
+    client = DBHandler('db_server')
+    client.insert_owned_card(request.json)
     return 'received'

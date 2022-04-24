@@ -23,7 +23,6 @@ services:
     image: yandex/clickhouse-server:21.8
     volumes:
       - ./database/db_data:/var/lib/clickhouse
-      #- ./database/db_init:/docker-entrypoint-initdb.d
     ports:
       - "8123:8123"
       - "9000:9000"

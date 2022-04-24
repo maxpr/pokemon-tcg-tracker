@@ -4,7 +4,8 @@ import pytz
 from clickhouse_driver import Client
 import pandas as pd
 
-from pokemon_data_scraper.src.db.db_schema import Extensions, CardList
+from pokemon_data_scraper.src.db.db_schema import Extensions, CardList, Collection
+from pokemon_data_scraper.src.logger.logging import LOGGER
 
 
 class DBHandler:
@@ -46,10 +47,36 @@ class DBHandler:
     def insert_cards(self, dataframe: pd.DataFrame):
         """Insert into the database cards.
 
+
         :param dataframe: Dataframe to insert containing cards.
         """
         self.client.execute(f"INSERT INTO {CardList} VALUES", dataframe.to_dict("records"), types_check=True)
         self.client.execute(f"OPTIMIZE TABLE {CardList} FINAL DEDUPLICATE")
+
+    def insert_owned_card(self, json_value):
+        # Escaping single quote
+        escaped_name = json_value[Collection.CARD_NAME].replace("'", "''")
+        if len(self.client.execute(f"SELECT {Collection.OWNED} FROM {Collection} "
+                                   f"WHERE {Collection.CARD_NAME}='{escaped_name}' AND"
+                                   f" {Collection.CARD_EXTENSION_CODE}='{json_value[Collection.CARD_EXTENSION_CODE]}' AND"
+                                   f" {Collection.CARD_NUMBER} = {json_value[Collection.CARD_NUMBER]}")) > 0:
+            LOGGER.error("UPDATE with name")
+            LOGGER.error(json_value[Collection.CARD_NAME])
+            self.client.execute(f"ALTER TABLE {Collection} UPDATE {Collection.OWNED}={int(json_value[Collection.OWNED])} "
+                                    f"WHERE {Collection.CARD_NAME}='{escaped_name}' AND"
+                                    f" {Collection.CARD_EXTENSION_CODE}='{json_value[Collection.CARD_EXTENSION_CODE]}' AND"
+                                    f" {Collection.CARD_NUMBER} = {json_value[Collection.CARD_NUMBER]}")
+        else:
+            LOGGER.error("NEW")
+            LOGGER.error(json_value[Collection.CARD_NAME])
+            self.client.execute(f"INSERT INTO {Collection} VALUES", [json_value], types_check=True)
+
+        # class Collection(metaclass=CollectionMeta):
+        #     """This object is a simple enumeration of the name linked to the collection table."""
+        #     CARD_NAME = "cardName"
+        #     CARD_NUMBER = "cardNumber"
+        #     CARD_EXTENSION_CODE = "cardExtensionCode"
+        #     OWNED = "owned"
 
     def get_oldest_extension(self):
         """Return the extensions code already present in the database.
@@ -61,5 +88,32 @@ class DBHandler:
         [val[0] for val in self.client.execute(f"SELECT MAX({Extensions.EXTENSION_RELEASE_DATE}) FROM {Extensions}")][0]
 
     def get_all_extensions_for_ui(self):
-        return self.client.query_dataframe(
-            f"SELECT  {Extensions.EXTENSION_NAME},{Extensions.EXTENSION_IMAGE_URL}, {Extensions.EXTENSION_CARD_NUMBER}, {Extensions.EXTENSION_RELEASE_DATE} FROM {Extensions} ORDER BY {Extensions.EXTENSION_RELEASE_DATE} DESCENDING")
+        df_ext = self.client.query_dataframe(
+            f"SELECT  {Extensions.EXTENSION_NAME}, {Extensions.EXTENSION_CODE},{Extensions.EXTENSION_IMAGE_URL}, {Extensions.EXTENSION_CARD_NUMBER}, {Extensions.EXTENSION_RELEASE_DATE} FROM {Extensions} ORDER BY {Extensions.EXTENSION_RELEASE_DATE} DESCENDING")
+        group = self.percent_owned_per_extension()
+
+        df_ext.set_index(Extensions.EXTENSION_CODE, inplace=True)
+        df_ext['ownedNumber'] = group
+        df_ext['ownedNumber'].fillna(0, inplace=True)
+        df_ext.reset_index(inplace=True)
+        df_ext['percentage'] = df_ext['ownedNumber'] / df_ext['extensionCardNumber']
+        return df_ext
+
+    def get_card_list_for_extension(self, extension_code: str):
+        df = self.client.query_dataframe(
+            f"SELECT {CardList.CARD_NAME}, {CardList.CARD_JAPANESE_NAME}, {CardList.CARD_NUMBER}, {CardList.CARD_RARITY}, {CardList.CARD_IMAGE_URL}, {Collection.OWNED}"
+            f" FROM {CardList} as cl LEFT JOIN {Collection} as co ON cl.{CardList.CARD_NAME}=co.{Collection.CARD_NAME} AND cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER}"
+            f" where {CardList.CARD_EXTENSION_CODE} = '{extension_code}' ORDER BY {CardList.CARD_NUMBER} ASCENDING"
+        )
+        df['cardName'] = df['cardName'].apply(lambda x: x.replace("'", "\\'"))
+        return df
+
+    def percent_owned_per_extension(self):
+        df = self.client.query_dataframe(f"SELECT {Collection.OWNED},{Collection.CARD_EXTENSION_CODE} FROM {CardList} as cl LEFT JOIN {Collection} as co "
+                                         f"ON cl.{CardList.CARD_NAME}=co.{Collection.CARD_NAME} AND"
+                                         f" cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER} AND"
+                                         f" cl.{CardList.CARD_EXTENSION_CODE}=co.{Collection.CARD_EXTENSION_CODE}")
+
+        test = df[df[Collection.OWNED] == 1].groupby(Collection.CARD_EXTENSION_CODE).count()
+        group = test[test[Collection.OWNED] != 0] * 100
+        return group
