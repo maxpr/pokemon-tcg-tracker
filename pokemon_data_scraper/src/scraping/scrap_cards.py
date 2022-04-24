@@ -26,12 +26,29 @@ def get_all_cards(extensions_url: str, extension_code: str):
     all_cards = driver.find_element(by=By.CLASS_NAME, value='cardlisting').find_elements(by=By.XPATH,
                                                                                          value='//div[@class="card "]')
     cards = []
-    for idx, card in enumerate(all_cards):
+    # Define a default card number in case a series has no card number
+    card_number = 0
+    for card in all_cards:
+        # Get card info and image
         card_name_and_number = card.text
         card_img_ref = card.find_element(by=By.CSS_SELECTOR, value='a').find_element(by=By.CSS_SELECTOR, value='img') \
             .get_attribute('data-src')
-        cards.append([card_name_and_number.split(' - ')[1], card_img_ref, idx + 1, extension_code, "UNKNOWN"])
+        try:
+            # If card number in name get it
+           card_name = card_name_and_number.split(' - ')[1]
+           card_number = int(card_name_and_number.split(' - ')[0].replace("#", ""))
+        except ValueError:
+            # One card is called #XY-P - Fighting Energy ....
+            card_name = card_name_and_number.split(' - ')[1]
+            card_number = card_number + 1
+        except IndexError:
+            # Else, increase previous number by 1 (Energy cases or empty info for some series)
+            card_name = card_name_and_number.replace('#', "")
+            card_number = card_number + 1
 
+            LOGGER.error(f"Problem with card {card_name_and_number}, name became {card_name} and number is {card_number}")
+
+        cards.append([card_name, card_img_ref, card_number, extension_code, "UNKNOWN"])
     return pd.DataFrame(cards, columns=[CardList.CARD_NAME, CardList.CARD_IMAGE_URL, CardList.CARD_NUMBER,
                                         CardList.CARD_EXTENSION_CODE, CardList.CARD_RARITY])
 

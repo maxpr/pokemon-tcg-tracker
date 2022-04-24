@@ -4,11 +4,12 @@ services:
 
   flask_app:
     restart: always
-    build: ./flask_app
+    build:
+      context : ./
+      dockerfile : ./flask_app/Dockerfile
     ports:
       - "8000:8000"
     command: python wsgi.py
-
 
   nginx:
     restart: always
@@ -19,18 +20,13 @@ services:
       - flask_app
 
   db_server:
-    image: yandex/clickhouse-server:21.3
+    image: yandex/clickhouse-server:21.8
     volumes:
       - ./database/db_data:/var/lib/clickhouse
-      - ./database/db_init:/docker-entrypoint-initdb.d
+      #- ./database/db_init:/docker-entrypoint-initdb.d
     ports:
       - "8123:8123"
       - "9000:9000"
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider localhost:8123/ping || exit 1
-      interval: 2s
-      timeout: 2s
-      retries: 16
   
   scraper_worker:
     build: ./pokemon_data_scraper

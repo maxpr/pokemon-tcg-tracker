@@ -39,14 +39,9 @@
              <tbody class="text-left">
                {% for odx, row in ext.iterrows() %}
                <tr>
-                  {% if "-" in row['card_name'] %}
-                     <td> <a class="btn" rel="popover" data-img={{ row['card_img_url'] }}> {{ row['card_name'].split("-")[0] }} </a></td>
-                     <td><input type="checkbox" name="id" onChange="handleChange()">{{ row['card_name'].split("-")[1] }}</td>
-                  {% else %}
-                     <td> <a class="btn" rel="popover" data-img={{ row['card_img_url'] }}> # </a></td>
-                     <td><input type="checkbox" name="id" onChange="handleChange()"> {{ row['card_name'] }}</td>
+                   <td> <a class="btn" rel="popover" data-img={{ row['cardImageUrl'] }}> {{ row['cardNumber'] }} </a></td>
+                   <td><input type="checkbox" name="id" onChange="handleChange()">{{ row['cardName'] }}</td>
                </tr>
-               {% endif %}
                {% endfor %}
              </tbody>
           </table>
@@ -67,7 +62,7 @@
    html: true,
    trigger: 'hover',
    placement: 'auto right',
-   content: function(){return '<img src="'+$(this).data('img') + '" />';}
+   content: function(){return '<img src="'+$(this).data('img') + '" style="width:300px;height:500px;"/>';}
    });
 </script>
 

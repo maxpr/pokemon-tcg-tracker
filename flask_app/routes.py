@@ -4,17 +4,12 @@
 #
 # You can find out more about blueprints at
 # http://flask.pocoo.org/docs/blueprints/
-
+from clickhouse_driver import Client
 from flask import Blueprint, render_template, flash, redirect, url_for
-from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
-from markupsafe import escape
-
+from pokemon_data_scraper.src.logger.logging import LOGGER
 from nav import nav
-from os import listdir
-from os.path import isfile, join
 
-import pandas as pd
 
 frontend = Blueprint('frontend', __name__)
 
@@ -31,20 +26,23 @@ nav.register_element('frontend_top', Navbar(
 def index():
     return render_template('index.html')
 
+
 # TODO: have extensions in table sorted by release date
 @frontend.route('/extensions')
 def extensions_list():
-    return render_template('extensions_list.html', extensions_list=[f.replace('.csv','') for f in listdir('dummy_data') if isfile(join("dummy_data", f))])
+    client = Client('db_server')
+    return render_template('extensions_list.html', extensions_df=client.query_dataframe(f"SELECT extensionName, extensionCode, extensionImageUrl, extensionCardNumber, toDate(extensionReleaseDate) FROM pokemon.extensions ORDER BY extensionReleaseDate DESCENDING"))
 
 
 # TODO: have extensions in table sorted by release date
-@frontend.route('/extension/<name>')
-def extension_details(name):
-    print(name+".csv")
-    return render_template('extension_details.html', ext=pd.read_csv(f"dummy_data/{name}.csv"))
+@frontend.route('/extension/<code>')
+def extension_details(code):
+    client = Client('db_server')
+    return render_template('extension_details.html', ext=client.query_dataframe(f"SELECT cardName, cardImageUrl, cardNumber  FROM pokemon.cardList WHERE cardExtensionCode='{code}' ORDER BY cardNumber ASCENDING"))
+
 
 @frontend.route('/data_post', methods=['POST'])
 def data_post():
     # handle your database access, etc.
-    print("TOTOA")
+    LOGGER.info("TOTOA")
     return 'received'

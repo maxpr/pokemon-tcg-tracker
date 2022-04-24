@@ -5,18 +5,24 @@ from selenium.webdriver.common.by import By
 from decouple import config
 import timestring
 import re
+import requests
+from bs4 import BeautifulSoup
+from bs4.element import ResultSet
 
 from selenium.webdriver.remote.webelement import WebElement
 
 from typing import List
 from tqdm import tqdm
+from joblib import Parallel, delayed
 
+from pokemon_data_scraper.src.meta_decorator.deprecation import deprecated
 from pokemon_data_scraper.src.scraping.utils.scraping_utils import create_chrome_driver
 from pokemon_data_scraper.src.db.db_schema import Extensions
 from pokemon_data_scraper.src.db.db_connector import DBHandler
 from pokemon_data_scraper.src.logger.logging import LOGGER
 
 
+@deprecated("Now use threading and BS4 to optimize fetching time")
 def get_all_extensions(extensions: List[WebElement], blocks: List[WebElement], db_handler: DBHandler,
                        reparse_all: bool = False):
     """Fetch all pokemon extensions and their info as a pandas DataFrame.
@@ -66,6 +72,7 @@ def get_all_extensions(extensions: List[WebElement], blocks: List[WebElement], d
                                               Extensions.EXTENSION_CARD_NUMBER])
 
 
+@deprecated("Now use threading and BS4 to optimize fetching time")
 def get_extension_metadata(ext_url: str):
     """Get the metadata of the extensions.
 
@@ -91,14 +98,86 @@ def get_extension_metadata(ext_url: str):
     return date_of_release, card_number
 
 
+def get_all_extensions_beautifulsoup_threading(series_bs: ResultSet, blocks_bs: ResultSet):
+    """Fetch all pokemon extensions and their info as a pandas DataFrame.
+
+    :param series_bs: List of series containing the pokemon series information.
+    :param blocks_bs: List of the blocks. In pokemon TCG, a block contains several extensions.
+    :param db_handler: A handler to connect to the DB.
+    :param reparse_all: If True, reparse all extensions. Else only parse extensions which are oldest than current one.
+
+    :rtype: pd.DataFrame
+    :return: A pandas DataFrame containing the pokemon serie name, code, url, image url, release date and card number.
+    """
+    data_blocks = []
+    for idx, block in enumerate(blocks_bs):
+        r = Parallel(n_jobs=10, backend="threading")(delayed(get_extension_beautifulsoup_threading)(extension, series_bs[idx].text) for extension in block.find_all('a'))
+
+        for res in r:
+            data_blocks.append(res)
+
+    # Return the DF
+    return pd.DataFrame(data_blocks, columns=[Extensions.SERIE_NAME,
+                                              Extensions.EXTENSION_CODE,
+                                              Extensions.EXTENSION_URL,
+                                              Extensions.EXTENSION_NAME,
+                                              Extensions.EXTENSION_IMAGE_URL,
+                                              Extensions.EXTENSION_RELEASE_DATE,
+                                              Extensions.EXTENSION_CARD_NUMBER])
+
+
+def get_extension_beautifulsoup_threading(extension_bs: BeautifulSoup, serie: str):
+    ext_code = extension_bs['name']
+    ext_url = extension_bs['href']
+    ext_name = extension_bs['title']
+    ext_image_url = extension_bs.find('img')['src']
+
+    final_ext_url = config('POKEMON_SCRAPE_URL') + ext_url.replace("/sets", "")
+
+    date_release, card_number = get_extension_metadata_beautifulsoup(final_ext_url)
+    LOGGER.info(f"Extensions {ext_name} processed")
+
+    return [serie, ext_code, final_ext_url, ext_name, ext_image_url, date_release, card_number]
+
+
+def get_extension_metadata_beautifulsoup(ext_url: str):
+    """Get the metadata of the extensions.
+
+    :param ext_url: URL of the extension to open.
+
+    :rtype: Tuple[datetime, int]
+    :return: The date of release of the extension and it's card number.
+    """
+    req = requests.get(ext_url)
+    bs_page = BeautifulSoup(req.text)
+
+    # Get metadata
+    card_metadata = bs_page.find('div', class_="setinfo").text
+    card_number_str = " ".join(card_metadata.split("\n")[2:6]).split("+")
+    card_number = sum([int(re.sub(r'[^0-9]', '', t)) for t in card_number_str])
+
+    date = " ".join(card_metadata.split("\n")[-4:]).strip()
+    date_of_release = timestring.Date(date).date
+    date_of_release = date_of_release.replace(tzinfo=pytz.timezone('Asia/Singapore'))
+
+    return date_of_release, card_number
+
+
 if __name__ == '__main__':
     driver = create_chrome_driver()
     driver.get(config('POKEMON_SCRAPE_URL'))
     db_handler = DBHandler(config('DB_URL'))
-    series: List[WebElement] = driver.find_elements(by=By.CLASS_NAME, value='set')
-    blocks: List[WebElement] = driver.find_elements(by=By.CLASS_NAME, value='buttonlisting')
 
-    dataframe_extensions = get_all_extensions(series, blocks, db_handler)
+    soup = BeautifulSoup(driver.page_source)
+    driver.quit()
+    series_bs: ResultSet = soup.find_all('h1', class_="icon set")
+    blocks_bs: ResultSet = soup.find_all('div', class_="buttonlisting")
+
+    # series: List[WebElement] = driver.find_elements(by=By.CLASS_NAME, value='set')
+    # blocks: List[WebElement] = driver.find_elements(by=By.CLASS_NAME, value='buttonlisting')
+    # dataframe_extensions = get_all_extensions(series, blocks, db_handler)
+
+    dataframe_extensions = get_all_extensions_beautifulsoup_threading(series_bs, blocks_bs)
 
     if not dataframe_extensions.empty:
         db_handler.insert_extensions(dataframe_extensions)

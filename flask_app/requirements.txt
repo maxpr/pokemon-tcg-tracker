@@ -7,3 +7,6 @@ Flask-Debug==0.4.3
 flask-nav==0.6
 Flask-WTF==1.0.0
 pandas
+python-decouple==3.6
+clickhouse_driver
+coloredlogs

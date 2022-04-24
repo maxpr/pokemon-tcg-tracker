@@ -23,22 +23,21 @@
     <div class="col-md-8">
       <div class="row space-16">&nbsp;</div>
       <div class="row">
-        {% for c in extensions_list %}
+        {% for c in extensions_df.values %}
 
         <div class="col-sm-4">
           <div class="thumbnail">
-            <div class="caption text-center" onclick="location.href='extension/{{ c }}'">
+            <div class="caption text-center" onclick="location.href='extension/{{ c[1] }}'">
               <div class="position-relative">
-                <img src="https://az818438.vo.msecnd.net/icons/slack.png" style="width:72px;height:72px;" />
+                <img src="{{ c[2] }}" style="width:150px;height:72px;" />
               </div>
-              <h4 id="thumbnail-label"><a href="https://flow.microsoft.com/en-us/connectors/shared_slack/slack/" target="_blank"> {{ c }} </a></h4>
-              <p><i class="glyphicon glyphicon-calendar light-red lighter bigger-120"></i>&nbsp;Released date</p>
+              <h4 id="thumbnail-label"><a href='extension/{{ c[1] }}' target="_blank"> {{ c[0] }} </a></h4>
+              <p><i class="glyphicon glyphicon-calendar light-red lighter bigger-120"></i>&nbsp;Released date : {{ c[4] }}</p>
               <div class="thumbnail-description smaller">Description of the extensions.</div>
             </div>
             <div class="caption card-footer text-center">
                 <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
-                    <p class="pg-text"> 25/100 </p>
+                    <div class="progress-bar" role="progressbar" style="width: 80%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="{{ c[2] }}">25/{{ c[3] }}</div>
                   </div>
             </div>
           </div>

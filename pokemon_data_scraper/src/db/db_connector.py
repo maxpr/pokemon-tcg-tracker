@@ -40,10 +40,10 @@ class DBHandler:
 
         # Insert if code is not in DB already, and extensions is released for at least 7 days or more.
         filtered_df = dataframe[(~dataframe[Extensions.EXTENSION_CODE].isin(already_present)) & (
-                    dataframe[Extensions.EXTENSION_RELEASE_DATE] < latest_release_date)]
+                dataframe[Extensions.EXTENSION_RELEASE_DATE] < latest_release_date)]
         self.client.execute(f"INSERT INTO {Extensions} VALUES", filtered_df.to_dict("records"), types_check=True)
 
-    def insert_cards(self,  dataframe: pd.DataFrame):
+    def insert_cards(self, dataframe: pd.DataFrame):
         """Insert into the database cards.
 
         :param dataframe: Dataframe to insert containing cards.
@@ -57,4 +57,9 @@ class DBHandler:
         :rtype: datetime
         :return: date of oldest extension.
         """
-        return [val[0] for val in self.client.execute(f"SELECT MAX({Extensions.EXTENSION_RELEASE_DATE}) FROM {Extensions}")][0]
+        return \
+        [val[0] for val in self.client.execute(f"SELECT MAX({Extensions.EXTENSION_RELEASE_DATE}) FROM {Extensions}")][0]
+
+    def get_all_extensions_for_ui(self):
+        return self.client.query_dataframe(
+            f"SELECT  {Extensions.EXTENSION_NAME},{Extensions.EXTENSION_IMAGE_URL}, {Extensions.EXTENSION_CARD_NUMBER}, {Extensions.EXTENSION_RELEASE_DATE} FROM {Extensions} ORDER BY {Extensions.EXTENSION_RELEASE_DATE} DESCENDING")

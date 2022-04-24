@@ -15,6 +15,7 @@ clickhouse client -n <<-EOSQL
 
     CREATE TABLE IF NOT EXISTS pokemon.cardList(
         cardName String,
+        cardJapaneseName String,
         cardExtensionCode String,
         cardNumber UInt8,
         cardImageUrl String,
