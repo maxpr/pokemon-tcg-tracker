@@ -4,24 +4,31 @@
 #
 # You can find out more about blueprints at
 # http://flask.pocoo.org/docs/blueprints/
+import time
+from datetime import datetime
+
 from clickhouse_driver import Client
-from flask import Blueprint, render_template, flash, redirect, url_for
-from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
+from flask import Blueprint, render_template, Response
+from flask_nav.elements import Navbar, View
 
 from pokemon_data_scraper.src.db.db_connector import DBHandler
 from pokemon_data_scraper.src.logger.logging import LOGGER
 from nav import nav
 from flask import request
+from pokemon_data_scraper.src.scraping.scrap_extensions import main_computation
 
 frontend = Blueprint('frontend', __name__)
 
 # We're adding a navbar as well through flask-navbar. In our example, the
 # navbar has an usual amount of Link-Elements, more commonly you will have a
 # lot more View instances.
-nav.register_element('frontend_top', Navbar(
-    View('Flask-Bootstrap', '.index'),
-    View('Home', '.index'),
-    View('Extensions', '.extensions_list')))
+nav.register_element('frontend_top',
+    Navbar(
+        View('Home', '.index'),
+        View('Extensions', '.extensions_list'),
+        View('Options', '.options')
+    )
+)
 
 
 @frontend.route('/')
@@ -36,7 +43,6 @@ def extensions_list():
     return render_template('extensions_list.html', extensions_df=client.get_all_extensions_for_ui())
 
 
-# TODO: have extensions in table sorted by release date
 @frontend.route('/extension/<name_code>')
 def extension_details(name_code: str):
     client = DBHandler('db_server')
@@ -46,7 +52,30 @@ def extension_details(name_code: str):
 @frontend.route('/data_post', methods=['POST'])
 def data_post():
     # handle your database access, etc.
-    LOGGER.info(f"TOTOA {request.json}")
+    LOGGER.debug(f"Request is {request.json}")
     client = DBHandler('db_server')
     client.insert_owned_card(request.json)
     return 'received'
+
+
+@frontend.route('/options')
+def options():
+    return render_template('options.html')
+
+
+@frontend.route("/log_stream", methods=["GET"])
+def log_stream():
+    """returns logging information"""
+    def generate():
+        with open('/deploy/flask_app/logs/scrapping_worker.log') as f:
+            while True:
+                yield f.read()
+                time.sleep(1)
+    return Response(generate(), mimetype="text/plain", content_type="text/event-stream")
+
+
+@frontend.route('/fetch_extensions', methods=['POST'])
+def launch_fetching_extensions():
+    LOGGER.info("We are starting to fetch extensions")
+    main_computation()
+    return ''

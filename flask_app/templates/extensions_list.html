@@ -23,21 +23,28 @@
     <div class="col-md-8">
       <div class="row space-16">&nbsp;</div>
       <div class="row">
+<!--          For each extension, we create a card-->
         {% for idx, row in extensions_df.iterrows() %}
-
-        <div class="col-sm-4">
+<!--          Style height fixed to avoid having weird layout where the card are not alligned-->
+        <div class="col-sm-4" style="height: 325px;">
+<!--            image-->
           <div class="thumbnail">
+<!--              Clickable image-->
             <div class="caption text-center" onclick="location.href='extension/{{ row['extensionCode'] }}_{{ row['extensionName'] }}'">
               <div class="position-relative">
                 <img src="{{ row['extensionImageUrl'] }}" style="width:150px;height:72px;" />
               </div>
-              <h4 id="thumbnail-label"><a href="extension/{{ row['extensionCode'] }}_{{ row['extensionName'] }}" target="_blank"> {{ row['extensionName'] }} </a></h4>
+                <!--              Clickable text -->
+              <h4 id="thumbnail-label"><a id="extension-title" href="extension/{{ row['extensionCode'] }}_{{ row['extensionName'] }}" target="_blank"> {{ row['extensionName'] }} </a></h4>
               <p><i class="glyphicon glyphicon-calendar light-red lighter bigger-120"></i>&nbsp;Released date : {{ row['extensionReleaseDate'] }}</p>
               <div class="thumbnail-description smaller">{{ row['extensionCode'] }}</div>
             </div>
             <div class="caption card-footer text-center">
                 <div class="progress">
-                    <div class="progress-bar" role="progressbar" style="width: {{ row['percentage'] }}%" aria-valuenow="{{ row['ownedNumber'] }}" aria-valuemin="0" aria-valuemax="{{ row['extensionCardNumber'] }}"> {{ row['ownedNumber'] }}/ {{ row['extensionCardNumber'] }}</div>
+<!--                    The progress bar text-->
+                    <span class="progress-value" style="font-size: medium;"><strong> {{ row['ownedNumber'] }} / {{ row['extensionCardNumber'] }} </strong></span>
+<!--                    The progress bar filling-->
+                    <div class="progress-bar" role="progressbar" style="width: {{ row['percentage'] }}%; background-color:green;"></div>
                   </div>
             </div>
           </div>

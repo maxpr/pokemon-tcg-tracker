@@ -13,7 +13,7 @@ from bs4.element import ResultSet
 
 from selenium.webdriver.remote.webelement import WebElement
 
-from typing import List, Tuple
+from typing import List, Tuple, Set, Optional
 from tqdm import tqdm
 from joblib import Parallel, delayed
 
@@ -26,7 +26,7 @@ from pokemon_data_scraper.src.logger.logging import LOGGER
 
 @deprecated("Now use threading and BS4 to optimize fetching time")
 def get_all_extensions(extensions: List[WebElement], blocks: List[WebElement], db_handler: DBHandler,
-                       reparse_all: bool = False) -> pd.DataFrame:
+                       reparse_all: bool = False) -> Optional[pd.DataFrame]:
     """Fetch all pokemon extensions and their info as a pandas DataFrame.
     
     :param extensions: List of webelements containing the pokemon series information.
@@ -98,7 +98,7 @@ def get_extension_metadata(ext_url: str) ->  Tuple[datetime, int]:
     return date_of_release, card_number
 
 
-def get_all_extensions_beautifulsoup_threading(series_bs: ResultSet, blocks_bs: ResultSet) -> pd.DataFrame:
+def get_all_extensions_beautifulsoup_threading(series_bs: ResultSet, blocks_bs: ResultSet, reprocess_all:bool =False) -> pd.DataFrame:
     """Fetch all pokemon extensions in a multi-threaded way and their info as a pandas DataFrame.
 
     :param series_bs: List of series containing the pokemon series information.
@@ -107,13 +107,17 @@ def get_all_extensions_beautifulsoup_threading(series_bs: ResultSet, blocks_bs: 
     :return: A pandas DataFrame containing the pokemon serie name, code, url, image url, release date and card number.
     """
     data_blocks = []
+    in_db_extensions = set()
+    if not reprocess_all:
+        db_handler = DBHandler(config('DB_URL'))
+        in_db_extensions = set(db_handler.list_already_present_extensions())
     for idx, block in enumerate(blocks_bs):
-        r = Parallel(n_jobs=int(config(('THREAD_NUMBER'))), backend="threading")(delayed(get_extension_beautifulsoup_threading)(extension, series_bs[idx].text) for extension in block.find_all('a'))
+        r = Parallel(n_jobs=int(config(('THREAD_NUMBER'))), backend="threading")(delayed(get_extension_beautifulsoup_threading)(extension, series_bs[idx].text, in_db_extensions) for extension in block.find_all('a'))
 
         for res in r:
-            data_blocks.append(res)
+            if res is not None:
+                data_blocks.append(res)
 
-    # Return the DF
     return pd.DataFrame(data_blocks, columns=[Extensions.SERIE_NAME,
                                               Extensions.EXTENSION_CODE,
                                               Extensions.EXTENSION_URL,
@@ -123,7 +127,7 @@ def get_all_extensions_beautifulsoup_threading(series_bs: ResultSet, blocks_bs: 
                                               Extensions.EXTENSION_CARD_NUMBER])
 
 
-def get_extension_beautifulsoup_threading(extension_bs: BeautifulSoup, serie: str) -> List:
+def get_extension_beautifulsoup_threading(extension_bs: BeautifulSoup, serie: str, current_ext_list: Set) -> List:
     """
     Fetch all information about an extension.
 
@@ -133,16 +137,19 @@ def get_extension_beautifulsoup_threading(extension_bs: BeautifulSoup, serie: st
     :return: List of feature for this extension.
     """
     ext_code = extension_bs['name']
-    ext_url = extension_bs['href']
-    ext_name = extension_bs['title']
-    ext_image_url = extension_bs.find('img')['src']
+    if ext_code not in current_ext_list:
+        ext_url = extension_bs['href']
+        ext_name = extension_bs['title']
+        ext_image_url = extension_bs.find('img')['src']
 
-    final_ext_url = config('POKEMON_SCRAPE_URL') + ext_url.replace("/sets", "")
+        final_ext_url = config('POKEMON_SCRAPE_URL') + ext_url.replace("/sets", "")
 
-    date_release, card_number = get_extension_metadata_beautifulsoup(final_ext_url)
-    LOGGER.info(f"Extensions {ext_name} processed")
+        date_release, card_number = get_extension_metadata_beautifulsoup(final_ext_url)
+        LOGGER.info(f"Extensions {ext_name} processed")
 
-    return [serie, ext_code, final_ext_url, ext_name, ext_image_url, date_release, card_number]
+        return [serie, ext_code, final_ext_url, ext_name, ext_image_url, date_release, card_number]
+    else:
+        LOGGER.info(f"Extensions of code {ext_code} is already processed ")
 
 
 def get_extension_metadata_beautifulsoup(ext_url: str) -> Tuple[datetime, int]:
@@ -167,7 +174,7 @@ def get_extension_metadata_beautifulsoup(ext_url: str) -> Tuple[datetime, int]:
     return date_of_release, card_number
 
 
-def main() -> None:
+def main_computation() -> None:
     """
     Main fucntion to be called outside of the module
     """
@@ -184,11 +191,14 @@ def main() -> None:
     # blocks: List[WebElement] = driver.find_elements(by=By.CLASS_NAME, value='buttonlisting')
     # dataframe_extensions = get_all_extensions(series, blocks, db_handler)
 
-    dataframe_extensions = get_all_extensions_beautifulsoup_threading(series_bs, blocks_bs)
+    # configure logger
+    LOGGER.info("We are preparing")
+
+    dataframe_extensions = get_all_extensions_beautifulsoup_threading(series_bs, blocks_bs, reprocess_all=False)
 
     if not dataframe_extensions.empty:
         db_handler.insert_extensions(dataframe_extensions)
 
 
 if __name__ == '__main__':
-    main()
+    main_computation()

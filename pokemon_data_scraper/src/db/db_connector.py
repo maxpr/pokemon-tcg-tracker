@@ -61,22 +61,15 @@ class DBHandler:
                                    f" {Collection.CARD_EXTENSION_CODE}='{json_value[Collection.CARD_EXTENSION_CODE]}' AND"
                                    f" {Collection.CARD_NUMBER} = {json_value[Collection.CARD_NUMBER]}")) > 0:
             LOGGER.error("UPDATE with name")
-            LOGGER.error(json_value[Collection.CARD_NAME])
+            LOGGER.debug(json_value[Collection.CARD_NAME])
             self.client.execute(f"ALTER TABLE {Collection} UPDATE {Collection.OWNED}={int(json_value[Collection.OWNED])} "
                                     f"WHERE {Collection.CARD_NAME}='{escaped_name}' AND"
                                     f" {Collection.CARD_EXTENSION_CODE}='{json_value[Collection.CARD_EXTENSION_CODE]}' AND"
                                     f" {Collection.CARD_NUMBER} = {json_value[Collection.CARD_NUMBER]}")
         else:
-            LOGGER.error("NEW")
-            LOGGER.error(json_value[Collection.CARD_NAME])
+            LOGGER.debug("NEW")
+            LOGGER.debug(json_value[Collection.CARD_NAME])
             self.client.execute(f"INSERT INTO {Collection} VALUES", [json_value], types_check=True)
-
-        # class Collection(metaclass=CollectionMeta):
-        #     """This object is a simple enumeration of the name linked to the collection table."""
-        #     CARD_NAME = "cardName"
-        #     CARD_NUMBER = "cardNumber"
-        #     CARD_EXTENSION_CODE = "cardExtensionCode"
-        #     OWNED = "owned"
 
     def get_oldest_extension(self):
         """Return the extensions code already present in the database.
@@ -96,7 +89,7 @@ class DBHandler:
         df_ext['ownedNumber'] = group
         df_ext['ownedNumber'].fillna(0, inplace=True)
         df_ext.reset_index(inplace=True)
-        df_ext['percentage'] = df_ext['ownedNumber'] / df_ext['extensionCardNumber']
+        df_ext['percentage'] = df_ext['ownedNumber'] * 100 / df_ext['extensionCardNumber']
         return df_ext
 
     def get_card_list_for_extension(self, extension_code: str):
@@ -115,5 +108,5 @@ class DBHandler:
                                          f" cl.{CardList.CARD_EXTENSION_CODE}=co.{Collection.CARD_EXTENSION_CODE}")
 
         test = df[df[Collection.OWNED] == 1].groupby(Collection.CARD_EXTENSION_CODE).count()
-        group = test[test[Collection.OWNED] != 0] * 100
+        group = test[test[Collection.OWNED] != 0]
         return group
