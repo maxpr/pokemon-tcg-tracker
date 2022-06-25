@@ -26,9 +26,3 @@ services:
     ports:
       - "8123:8123"
       - "9000:9000"
-  
-#  scraper_worker:
-#    build: ./pokemon_data_scraper
-#    volumes:
-#      - ./pokemon_data_scraper:/deploy/pokemon_data_scraper
-#

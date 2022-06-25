@@ -28,50 +28,102 @@ intact. #}
 <script>
 // function to log the output
       $(document).ready(function(){
-        var output = document.getElementById('output');
-        var xhr = new XMLHttpRequest();
-        if (window.countInterval) clearInterval(window.countInterval)
-        xhr.open('GET', '{{ url_for('frontend.log_stream') }}', true);
-        xhr.send();
-        window.countInterval = setInterval(function() {
-          output.textContent = xhr.responseText;
+        var output_extensions = document.getElementById('output-extensions');
+        var output_cards = document.getElementById('output-cards');
+
+        var xhr_extensions = new XMLHttpRequest();
+        if (window.countIntervalExt) clearInterval(window.countIntervalExt)
+        xhr_extensions.open('GET', '{{ url_for('frontend.log_extensions_stream') }}', true);
+        xhr_extensions.send();
+        window.countIntervalExt = setInterval(function() {
+          output_extensions.textContent = xhr_extensions.responseText;
         }, 500);
+
+        var xhr_cards = new XMLHttpRequest();
+        if (window.countIntervalCard) clearInterval(window.countIntervalCard)
+        xhr_cards.open('GET', '{{ url_for('frontend.log_cards_stream') }}', true);
+        xhr_cards.send();
+        window.countIntervalCard = setInterval(function() {
+          output_cards.textContent = xhr_cards.responseText;
+        }, 500);
+
       });
+
 </script>
+
 <script type=text/javascript>
-      function fetch() {
-            document.getElementById('extension-button').disabled = true;
-            setTimeout(function(){ document.getElementById("extension-button").disabled = false; },50000);
+      function fetch_extensions() {
+            document.getElementById('extensions-button').disabled = true;
+            setTimeout(function(){ document.getElementById("extensions-button").disabled = false; },50000);
             $.ajax({
                  url: "{{ url_for('frontend.launch_fetching_extensions') }}",
+                 method: "POST"
+             });
+       }
+
+       function fetch_cards() {
+            document.getElementById('cards-button').disabled = true;
+            setTimeout(function(){ document.getElementById("cards-button").disabled = false; },50000);
+            $.ajax({
+                 url: "{{ url_for('frontend.launch_fetching_cards') }}",
                  method: "POST"
              });
        }
 </script>
 
 <div class="container">
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
-        Launch extension fetching
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalExt">
+        Launch extensions fetching
     </button>
 
-    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    <div class="modal fade" id="modalExt" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
          aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                    <h5 class="modal-title" id="modalExtLabel">Fetch extensions (please don't close)</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div class="logging_window">
-                        <pre id="output"></pre>
+                        <pre id="output-extensions"></pre>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button id="extension-button" type="button" onclick="fetch()" class="btn btn-primary">Fetch extensions</button>
+                    <button id="extensions-button" type="button" onclick="fetch_extensions()" class="btn btn-primary">Fetch extensions</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalCard">
+        Launch cards fetching
+    </button>
+
+    <div class="modal fade" id="modalCard" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCardLabel">Fetch cards (please don't close)</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="logging_window">
+                        <pre id="output-cards"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button id="cards-button" type="button" onclick="fetch_cards()" class="btn btn-primary">Fetch cards</button>
                 </div>
             </div>
         </div>

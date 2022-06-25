@@ -15,4 +15,4 @@ if __name__ == '__main__':
 
 
     #scrap_extensions.main()
-    scrap_cards.main()
+    scrap_cards.main_card_fetching()

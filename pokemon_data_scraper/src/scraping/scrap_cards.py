@@ -12,7 +12,9 @@ from tqdm import tqdm
 from pokemon_data_scraper.src.scraping.utils.scraping_utils import create_chrome_driver
 from pokemon_data_scraper.src.db.db_schema import CardList
 from pokemon_data_scraper.src.db.db_connector import DBHandler
-from pokemon_data_scraper.src.logger.logging import LOGGER
+from pokemon_data_scraper.src.logger.logging import get_logger
+
+LOCAL_LOGGER = get_logger("cards-scraper")
 
 
 def get_all_card_beautifulsoup_threaded(extensions_url: str, extension_code: str):
@@ -26,7 +28,7 @@ def get_all_card_beautifulsoup_threaded(extensions_url: str, extension_code: str
 
     for res in r:
         if res[0] is None:
-            LOGGER.error(f"BAD STUFF for ulr {extensions_url}, {res[1]}")
+            LOCAL_LOGGER.error(f"BAD STUFF for ulr {extensions_url}, {res[1]}")
         else:
             cards.append(res)
 
@@ -62,26 +64,26 @@ def process_one_card(card: BeautifulSoup, index: int, extension_code: str) -> Un
             card_number = int(dict_card['Card'].split('/')[0])
         except (KeyError, ValueError):
             card_number = index + 1
-            LOGGER.error(f"Problem with card, name became {card_name} and number is {card_number}")
+            LOCAL_LOGGER.error(f"Problem with card (probably an energy), name became {card_str_name} and number is {card_number}")
 
         return [card_str_name, card_japanese_name, card_img, card_number, extension_code, card_rarity]
     except Exception as e:
         return None, e
 
 
-def main() -> None:
+def main_card_fetching(reprocess_all: bool = False) -> None:
     """
     Main function to wrap and be called outside.
     """
     db_handler = DBHandler(config('DB_URL'))
 
-    LOGGER.info("Starting to process cards")
-    for val in tqdm(db_handler.get_all_extensions_url_and_code()):
-        LOGGER.info(f"Processing {val[1]}")
+    LOCAL_LOGGER.info("Starting to process cards")
+    for val in tqdm(db_handler.get_all_extensions_url_and_code(reprocess_all=reprocess_all)):
+        LOCAL_LOGGER.info(f"Processing {val[1]}")
         dataframe_cards = get_all_card_beautifulsoup_threaded(val[0], val[1])
         if not dataframe_cards.empty:
             db_handler.insert_cards(dataframe_cards)
 
 
 if __name__ == '__main__':
-    main()
+    main_card_fetching()

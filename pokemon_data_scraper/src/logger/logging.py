@@ -28,7 +28,7 @@ def get_logger(name: str, level: str = logging.INFO) -> logging.Logger:
     logger.propagate = False
 
     # Use FileHandler() to log to a file
-    path = f"logs/scrapping_worker.log"
+    path = f"logs/logger-{name}.log"
     os.makedirs("/".join(path.split("/")[:-1]), exist_ok=True)
     file_handler = logging.FileHandler(path)
     file_handler.setLevel(level)

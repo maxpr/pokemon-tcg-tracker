@@ -25,6 +25,9 @@
 
  <div class="container">
     <p>Pokemon extension: {{ext_name}}, Code: {{ ext_code }}</p>
+     <button type="button" class="btn btn-delete" onclick="deleteExtension('{{ ext_code }}')">
+        Delete this extension
+    </button>
     <div class="row">
        <div>
           <!-- Adding bootstrap table classes to style a table-->
@@ -98,6 +101,16 @@
                  contentType: "application/json",
                  dataType: 'json',
                  data: JSON.stringify( {"cardName": cardName, "cardNumber": cardNumber, "cardExtensionCode": cardExtensionCode, "owned": sel.checked})
+             });
+         }
+
+      function deleteExtension(extensionCode){
+             $.ajax({
+                 url: "{{ url_for('frontend.delete_ext') }}",
+                 method: "POST",
+                 contentType: "application/json",
+                 dataType: 'json',
+                 data: JSON.stringify( {"extensionCode": extensionCode})
              });
          }
  </script>

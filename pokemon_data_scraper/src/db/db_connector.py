@@ -4,7 +4,7 @@ import pytz
 from clickhouse_driver import Client
 import pandas as pd
 
-from pokemon_data_scraper.src.db.db_schema import Extensions, CardList, Collection
+from pokemon_data_scraper.src.db.db_schema import Extensions, CardList, Collection, Prices
 from pokemon_data_scraper.src.logger.logging import LOGGER
 
 
@@ -21,13 +21,18 @@ class DBHandler:
         """
         return [val[0] for val in self.client.execute(f"SELECT DISTINCT {Extensions.EXTENSION_CODE} FROM {Extensions}")]
 
-    def get_all_extensions_url_and_code(self):
+    def get_all_extensions_url_and_code(self, reprocess_all: bool = False):
         """Return the extensions code already present in the database.
 
         :rtype: List
         :return: List of Extensions.
         """
-        return self.client.execute(f"SELECT {Extensions.EXTENSION_URL}, {Extensions.EXTENSION_CODE} FROM {Extensions}")
+        if reprocess_all:
+            return self.client.execute(f"SELECT {Extensions.EXTENSION_URL}, {Extensions.EXTENSION_CODE} FROM {Extensions}")
+        else:
+            return self.client.execute(
+                f"SELECT {Extensions.EXTENSION_URL}, {Extensions.EXTENSION_CODE} FROM {Extensions} WHERE "
+                f"{Extensions.EXTENSION_CODE} NOT IN (SELECT DISTINCT {CardList.CARD_EXTENSION_CODE} FROM {CardList})")
 
     def insert_extensions(self, dataframe: pd.DataFrame):
         """Insert into the database extensions that don't already exists.
@@ -35,9 +40,8 @@ class DBHandler:
         :param dataframe: Dataframe to insert containing extensions
         """
         # Declare 2 filters. Only take extensions not in DB, and that have released for more than 1 week.
-        dataframe.to_csv('data.csv')
         already_present = self.list_already_present_extensions()
-        latest_release_date = datetime.now(tz=pytz.timezone('Asia/Singapore')) + timedelta(days=7)
+        latest_release_date = datetime.now(tz=pytz.timezone('Asia/Singapore')) - timedelta(days=7)
 
         # Insert if code is not in DB already, and extensions is released for at least 7 days or more.
         filtered_df = dataframe[(~dataframe[Extensions.EXTENSION_CODE].isin(already_present)) & (
@@ -110,3 +114,10 @@ class DBHandler:
         test = df[df[Collection.OWNED] == 1].groupby(Collection.CARD_EXTENSION_CODE).count()
         group = test[test[Collection.OWNED] != 0]
         return group
+
+    def delete_extension(self, json_value):
+        ext_code = json_value[Extensions.EXTENSION_CODE]
+        self.client.execute(f"ALTER TABLE {Extensions} DELETE WHERE {Extensions.EXTENSION_CODE} = '{ext_code}'")
+        self.client.execute(f"ALTER TABLE {CardList} DELETE WHERE {CardList.CARD_EXTENSION_CODE} = '{ext_code}'")
+        self.client.execute(f"ALTER TABLE {Collection} DELETE WHERE {Collection.CARD_EXTENSION_CODE} = '{ext_code}'")
+        self.client.execute(f"ALTER TABLE {Prices} DELETE WHERE {Prices.CARD_EXTENSION_CODE} = '{ext_code}'")

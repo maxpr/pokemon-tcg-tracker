@@ -16,6 +16,7 @@ from pokemon_data_scraper.src.logger.logging import LOGGER
 from nav import nav
 from flask import request
 from pokemon_data_scraper.src.scraping.scrap_extensions import main_computation
+from pokemon_data_scraper.src.scraping.scrap_cards import main_card_fetching
 
 frontend = Blueprint('frontend', __name__)
 
@@ -63,15 +64,15 @@ def options():
     return render_template('options.html')
 
 
-@frontend.route("/log_stream", methods=["GET"])
-def log_stream():
+@frontend.route("/log_extensions_stream", methods=["GET"])
+def log_extensions_stream():
     """returns logging information"""
-    def generate():
-        with open('/deploy/flask_app/logs/scrapping_worker.log') as f:
+    def generate_log_extensions():
+        with open('/deploy/flask_app/logs/logger-extensions-scraper.log') as f:
             while True:
                 yield f.read()
                 time.sleep(1)
-    return Response(generate(), mimetype="text/plain", content_type="text/event-stream")
+    return Response(generate_log_extensions(), mimetype="text/plain", content_type="text/event-stream")
 
 
 @frontend.route('/fetch_extensions', methods=['POST'])
@@ -79,3 +80,30 @@ def launch_fetching_extensions():
     LOGGER.info("We are starting to fetch extensions")
     main_computation()
     return ''
+
+
+@frontend.route("/log_cards_stream", methods=["GET"])
+def log_cards_stream():
+    """returns logging information"""
+    def generate_log_cards():
+        with open('/deploy/flask_app/logs/logger-cards-scraper.log') as f:
+            while True:
+                yield f.read()
+                time.sleep(1)
+    return Response(generate_log_cards(), mimetype="text/plain", content_type="text/event-stream")
+
+
+@frontend.route('/fetch_cards', methods=['POST'])
+def launch_fetching_cards():
+    LOGGER.info("We are starting to fetch cards")
+    main_card_fetching()
+    return ''
+
+
+@frontend.route('/delete_ext', methods=['POST'])
+def delete_ext():
+    # handle your database access, etc.
+    LOGGER.debug(f"Request is {request.json}")
+    client = DBHandler('db_server')
+    client.delete_extension(request.json)
+    return 'received'

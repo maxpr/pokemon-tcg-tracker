@@ -158,7 +158,7 @@ def create_db_queries() -> List[str]:
         f"""CREATE TABLE IF NOT EXISTS {Prices}(
         {Prices.CARD_NAME} String,
         {Prices.CARD_NUMBER} UInt8,
-        {Prices.CARD_EXTENSION_CODE} UInt64,
+        {Prices.CARD_EXTENSION_CODE} String,
         {Prices.TIMESTAMP_PRICE} DateTime('Asia/Singapore'),
         {Prices.PRICE} Float64
     ) ENGINE = ReplacingMergeTree()

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import pytz
@@ -21,7 +21,9 @@ from pokemon_data_scraper.src.meta_decorator.deprecation import deprecated
 from pokemon_data_scraper.src.scraping.utils.scraping_utils import create_chrome_driver
 from pokemon_data_scraper.src.db.db_schema import Extensions
 from pokemon_data_scraper.src.db.db_connector import DBHandler
-from pokemon_data_scraper.src.logger.logging import LOGGER
+from pokemon_data_scraper.src.logger.logging import get_logger
+
+LOCAL_LOGGER = get_logger("extensions-scraper")
 
 
 @deprecated("Now use threading and BS4 to optimize fetching time")
@@ -57,7 +59,7 @@ def get_all_extensions(extensions: List[WebElement], blocks: List[WebElement], d
                                                           Extensions.EXTENSION_IMAGE_URL,
                                                           Extensions.EXTENSION_RELEASE_DATE,
                                                           Extensions.EXTENSION_CARD_NUMBER])
-            LOGGER.info(f"Extensions {ext_name} processed")
+            LOCAL_LOGGER.info(f"Extensions {ext_name} processed")
 
             # Add them for later
             data_blocks.append(
@@ -142,14 +144,15 @@ def get_extension_beautifulsoup_threading(extension_bs: BeautifulSoup, serie: st
         ext_name = extension_bs['title']
         ext_image_url = extension_bs.find('img')['src']
 
-        final_ext_url = config('POKEMON_SCRAPE_URL') + ext_url.replace("/sets", "")
+        LOCAL_LOGGER.info(ext_url)
+        final_ext_url = (config('POKEMON_SCRAPE_URL') + ext_url).replace("/sets", "")
 
         date_release, card_number = get_extension_metadata_beautifulsoup(final_ext_url)
-        LOGGER.info(f"Extensions {ext_name} processed")
+        LOCAL_LOGGER.info(f"Extensions {ext_name} processed")
 
         return [serie, ext_code, final_ext_url, ext_name, ext_image_url, date_release, card_number]
     else:
-        LOGGER.info(f"Extensions of code {ext_code} is already processed ")
+        LOCAL_LOGGER.info(f"Extensions of code {ext_code} is already processed ")
 
 
 def get_extension_metadata_beautifulsoup(ext_url: str) -> Tuple[datetime, int]:
@@ -163,14 +166,19 @@ def get_extension_metadata_beautifulsoup(ext_url: str) -> Tuple[datetime, int]:
     bs_page = BeautifulSoup(req.text, features="html.parser")
 
     # Get metadata
-    card_metadata = bs_page.find('div', class_="setinfo").text
-    card_number_str = " ".join(card_metadata.split("\n")[2:6]).split("+")
-    card_number = sum([int(re.sub(r'[^0-9]', '', t)) for t in card_number_str])
+    try:
+        card_metadata = bs_page.find('div', class_="setinfo").text
+        card_number_str = " ".join(card_metadata.split("\n")[2:6]).split("+")
+        # Actually this is incorrect
+        card_number = sum([int(re.sub(r'[^0-9]', '', t)) for t in card_number_str])
 
-    date = " ".join(card_metadata.split("\n")[-4:]).strip()
-    date_of_release = timestring.Date(date).date
-    date_of_release = date_of_release.replace(tzinfo=pytz.timezone('Asia/Singapore'))
-
+        date = " ".join(card_metadata.split("\n")[-4:]).strip()
+        date_of_release = timestring.Date(date).date
+        date_of_release = date_of_release.replace(tzinfo=pytz.timezone('Asia/Singapore'))
+    except AttributeError:
+        LOCAL_LOGGER.error(f"Extension {ext_url} got us an error on metadata")
+        date_of_release = datetime.now() + timedelta(day=1)
+        card_number = 0
     return date_of_release, card_number
 
 
@@ -191,13 +199,14 @@ def main_computation() -> None:
     # blocks: List[WebElement] = driver.find_elements(by=By.CLASS_NAME, value='buttonlisting')
     # dataframe_extensions = get_all_extensions(series, blocks, db_handler)
 
-    # configure logger
-    LOGGER.info("We are preparing")
+    # configure LOCAL_LOGGER
+    LOCAL_LOGGER.info("We are preparing to fetch, should take ~3 minutes.")
 
     dataframe_extensions = get_all_extensions_beautifulsoup_threading(series_bs, blocks_bs, reprocess_all=False)
 
     if not dataframe_extensions.empty:
         db_handler.insert_extensions(dataframe_extensions)
+    LOCAL_LOGGER.info("We are done fetching !")
 
 
 if __name__ == '__main__':
