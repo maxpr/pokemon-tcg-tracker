@@ -119,10 +119,14 @@ h2{
       border-right: 1px solid #E6E4E4;
   }
   .fl-table tr td:nth-child(even) {
-      border-right: 1px solid #E6E4E4;
+      border-right: 1px solid #E6E4E4;btn-delete
   }
   .fl-table tbody td {
       display: block;
       text-align: center;
   }
+}
+
+.btn-delete{
+    background: red;
 }

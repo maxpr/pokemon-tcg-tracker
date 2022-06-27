@@ -1,59 +1,62 @@
 {# This simple template derives from ``base.html``. See ``base.html`` for
-    more information about template inheritance. #}
- {%- extends "base.html" %}
- 
- {# Loads some of the macros included with Flask-Bootstrap. We are using the
-    utils module here to automatically render Flask's flashed messages in a
-    bootstrap friendly manner #}
- {% import "bootstrap/utils.html" as utils %}
- 
- {% block styles -%}
- {{super()}} 
- <link rel="stylesheet" type="text/css"
-       href="{{url_for('static', filename='styles/extensions.css')}}">
+more information about template inheritance. #}
+
+{# Loads some of the macros included with Flask-Bootstrap. We are using the
+utils module here to automatically render Flask's flashed messages in a
+bootstrap friendly manner #}
+{% import "bootstrap/utils.html" as utils %}
+
+{% block styles -%}
+<link rel="stylesheet" type="text/css"
+      href="{{url_for('static', filename='styles/extensions.css')}}">
 {% endblock %}
 
- 
- {# Inside the ``content`` is where you should place most of your own stuff.
-    This will keep scripts at the page end and a navbar you add on later
-    intact. #}
- {% block content %} 
- <div class="row">
+
+{# Inside the ``content`` is where you should place most of your own stuff.
+This will keep scripts at the page end and a navbar you add on later
+intact. #}
+{% block content %}
+<div class="row">
     <div class="col-md-2">&nbsp;</div>
     <div class="col-md-8">
-      <div class="row space-16">&nbsp;</div>
-      <div class="row">
-<!--          For each extension, we create a card-->
-        {% for idx, row in extensions_df.iterrows() %}
-<!--          Style height fixed to avoid having weird layout where the card are not alligned-->
-        <div class="col-sm-4" style="height: 325px;">
-<!--            image-->
-          <div class="thumbnail">
-<!--              Clickable image-->
-            <div class="caption text-center" onclick="location.href='extension/{{ row['extensionCode'] }}_{{ row['extensionName'] }}'">
-              <div class="position-relative">
-                <img src="{{ row['extensionImageUrl'] }}" style="width:150px;height:72px;" />
-              </div>
-                <!--              Clickable text -->
-              <h4 id="thumbnail-label"><a id="extension-title" href="extension/{{ row['extensionCode'] }}_{{ row['extensionName'] }}" target="_blank"> {{ row['extensionName'] }} </a></h4>
-              <p><i class="glyphicon glyphicon-calendar light-red lighter bigger-120"></i>&nbsp;Released date : {{ row['extensionReleaseDate'] }}</p>
-              <div class="thumbnail-description smaller">{{ row['extensionCode'] }}</div>
+        <div class="row space-16">&nbsp;</div>
+        <div class="row">
+            <!--          For each extension, we create a card-->
+            {% for idx, row in extensions_df.iterrows() %}
+            <!--          Style height fixed to avoid having weird layout where the card are not alligned-->
+            <div class="col-sm-4" style="height: 325px;">
+                <!--            image-->
+                <div class="thumbnail">
+                    <!--              Clickable image-->
+                    <div class="caption text-center"
+                         onclick="location.href='extension/{{ row['extensionCode'] }}_{{ row['extensionName'] }}'">
+                        <div class="position-relative">
+                            <img src="{{ row['extensionImageUrl'] }}" style="width:150px;height:72px;"/>
+                        </div>
+                        <!--              Clickable text -->
+                        <h4 id="thumbnail-label"><a id="extension-title"
+                                                    href="extension/{{ row['extensionCode'] }}_{{ row['extensionName'] }}"
+                                                    target="_blank"> {{ row['extensionName'] }} </a></h4>
+                        <p><i class="glyphicon glyphicon-calendar light-red lighter bigger-120"></i>&nbsp;Released date
+                            : {{ row['extensionReleaseDate'] }}</p>
+                        <div class="thumbnail-description smaller">{{ row['extensionCode'] }}</div>
+                    </div>
+                    <div class="caption card-footer text-center">
+                        <div class="progress">
+                            <!--                    The progress bar text-->
+                            <span class="progress-value" style="font-size: medium;"><strong> {{ row['ownedNumber'] }} / {{ row['extensionCardNumber'] }} </strong></span>
+                            <!--                    The progress bar filling-->
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: {{ row['percentage'] }}%; background-color:green;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="caption card-footer text-center">
-                <div class="progress">
-<!--                    The progress bar text-->
-                    <span class="progress-value" style="font-size: medium;"><strong> {{ row['ownedNumber'] }} / {{ row['extensionCardNumber'] }} </strong></span>
-<!--                    The progress bar filling-->
-                    <div class="progress-bar" role="progressbar" style="width: {{ row['percentage'] }}%; background-color:green;"></div>
-                  </div>
-            </div>
-          </div>
+
+            {% endfor %}
+
         </div>
-
-         {% endfor %}
-
-      </div>
-    <div class="col-md-2">&nbsp;</div>
+        <div class="col-md-2">&nbsp;</div>
     </div>
-  </div>  
- {%- endblock %}
+</div>
+{%- endblock %}

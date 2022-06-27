@@ -1,0 +1,57 @@
+{# This simple template derives from ``base.html``. See ``base.html`` for
+more information about template inheritance. #}
+{%- extends "base.html" %}
+
+{# Loads some of the macros included with Flask-Bootstrap. We are using the
+utils module here to automatically render Flask's flashed messages in a
+bootstrap friendly manner #}
+{% import "bootstrap/utils.html" as utils %}
+
+{% block styles -%}
+{{super()}}
+<link rel="stylesheet" type="text/css"
+      href="{{url_for('static', filename='styles/extensions.css')}}">
+{% endblock %}
+
+
+{# Inside the ``content`` is where you should place most of your own stuff.
+This will keep scripts at the page end and a navbar you add on later
+intact. #}
+{% block content %}
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+  load_data();
+  function load_data(query)
+  {
+   $.ajax({
+    url: "{{ url_for('frontend.extension_live_search') }}",
+    method:"POST",
+    data:{'query': query},
+    success:function(data)
+    {
+      $('#result').html(data);
+      $("#result").append(data.htmlresponse);
+    }
+   });
+  }
+  $('#search_text').keyup(function(){
+    var search = $(this).val();
+    load_data(search);
+  });
+});
+</script>
+
+<div class="search-box">
+    <div class="row">
+        <div class="col-md-8">
+            <h5>Search Extensions</h5>
+        </div>
+        <div class="col-md-8">
+            <input type="text" name="search_text" id="search_text" class="form-control" placeholder="Search any extensions (code or name)">
+        </div>
+    </div>
+</div>
+<div id="result"></div>
+{%- endblock %}

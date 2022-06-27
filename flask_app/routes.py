@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 
 from clickhouse_driver import Client
-from flask import Blueprint, render_template, Response
+from flask import Blueprint, render_template, Response, jsonify
 from flask_nav.elements import Navbar, View
 
 from pokemon_data_scraper.src.db.db_connector import DBHandler
@@ -40,8 +40,7 @@ def index():
 # TODO: extensions progress
 @frontend.route('/extensions')
 def extensions_list():
-    client = DBHandler('db_server')
-    return render_template('extensions_list.html', extensions_df=client.get_all_extensions_for_ui())
+    return render_template('extension_page.html')
 
 
 @frontend.route('/extension/<name_code>')
@@ -107,3 +106,17 @@ def delete_ext():
     client = DBHandler('db_server')
     client.delete_extension(request.json)
     return 'received'
+
+
+@frontend.route("/extension_live_search", methods=["POST", "GET"])
+def extension_live_search():
+    client = DBHandler('db_server')
+    if request.method == 'POST':
+        if request.form:
+            search_word = request.form['query']
+            LOGGER.info(search_word)
+            extensions_list = client.get_all_extensions_for_ui(value=search_word)
+        else:
+            extensions_list = client.get_all_extensions_for_ui(value='')
+
+    return jsonify({'htmlresponse': render_template('extensions_list.html', extensions_df=extensions_list)})

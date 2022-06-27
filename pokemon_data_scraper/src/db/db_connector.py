@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import List
 
 import pytz
 from clickhouse_driver import Client
@@ -84,16 +85,27 @@ class DBHandler:
         return \
         [val[0] for val in self.client.execute(f"SELECT MAX({Extensions.EXTENSION_RELEASE_DATE}) FROM {Extensions}")][0]
 
-    def get_all_extensions_for_ui(self):
-        df_ext = self.client.query_dataframe(
-            f"SELECT  {Extensions.EXTENSION_NAME}, {Extensions.EXTENSION_CODE},{Extensions.EXTENSION_IMAGE_URL}, {Extensions.EXTENSION_CARD_NUMBER}, {Extensions.EXTENSION_RELEASE_DATE} FROM {Extensions} ORDER BY {Extensions.EXTENSION_RELEASE_DATE} DESCENDING")
-        group = self.percent_owned_per_extension()
+    def get_all_extensions_for_ui(self, value):
+        # TODO: Escape the value lol
+        if value != '':
+            df_ext = self.client.query_dataframe(
+                f"SELECT  {Extensions.EXTENSION_NAME}, {Extensions.EXTENSION_CODE},{Extensions.EXTENSION_IMAGE_URL},"
+                f" {Extensions.EXTENSION_CARD_NUMBER}, {Extensions.EXTENSION_RELEASE_DATE} FROM {Extensions}"
+                f" WHERE {Extensions.EXTENSION_CODE} ILIKE '%{value}%' OR {Extensions.EXTENSION_NAME} ILIKE '%{value}%'"
+                f"ORDER BY {Extensions.EXTENSION_RELEASE_DATE} DESCENDING")
+        else:
+            df_ext = self.client.query_dataframe(
+                f"SELECT  {Extensions.EXTENSION_NAME}, {Extensions.EXTENSION_CODE},{Extensions.EXTENSION_IMAGE_URL},"
+                f" {Extensions.EXTENSION_CARD_NUMBER}, {Extensions.EXTENSION_RELEASE_DATE} FROM {Extensions}"
+                f" ORDER BY {Extensions.EXTENSION_RELEASE_DATE} DESCENDING")
 
-        df_ext.set_index(Extensions.EXTENSION_CODE, inplace=True)
-        df_ext['ownedNumber'] = group
-        df_ext['ownedNumber'].fillna(0, inplace=True)
-        df_ext.reset_index(inplace=True)
-        df_ext['percentage'] = df_ext['ownedNumber'] * 100 / df_ext['extensionCardNumber']
+        if not df_ext.empty:
+            group = self.percent_owned_per_extension(df_ext[Extensions.EXTENSION_CODE].values)
+            df_ext.set_index(Extensions.EXTENSION_CODE, inplace=True)
+            df_ext['ownedNumber'] = group
+            df_ext['ownedNumber'].fillna(0, inplace=True)
+            df_ext.reset_index(inplace=True)
+            df_ext['percentage'] = df_ext['ownedNumber'] * 100 / df_ext['extensionCardNumber']
         return df_ext
 
     def get_card_list_for_extension(self, extension_code: str):
@@ -105,14 +117,17 @@ class DBHandler:
         df['cardName'] = df['cardName'].apply(lambda x: x.replace("'", "\\'"))
         return df
 
-    def percent_owned_per_extension(self):
+    def percent_owned_per_extension(self, extension_code_list: List[str]):
+        extension_code_list_str = "','".join(extension_code_list)
         df = self.client.query_dataframe(f"SELECT {Collection.OWNED},{Collection.CARD_EXTENSION_CODE} FROM {CardList} as cl LEFT JOIN {Collection} as co "
-                                         f"ON cl.{CardList.CARD_NAME}=co.{Collection.CARD_NAME} AND"
-                                         f" cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER} AND"
-                                         f" cl.{CardList.CARD_EXTENSION_CODE}=co.{Collection.CARD_EXTENSION_CODE}")
+                                             f"ON cl.{CardList.CARD_NAME}=co.{Collection.CARD_NAME} AND"
+                                             f" cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER} AND"
+                                             f" cl.{CardList.CARD_EXTENSION_CODE}=co.{Collection.CARD_EXTENSION_CODE}"
+                                            f" WHERE {CardList.CARD_EXTENSION_CODE} IN ('{extension_code_list_str}')"
+                                         )
 
-        test = df[df[Collection.OWNED] == 1].groupby(Collection.CARD_EXTENSION_CODE).count()
-        group = test[test[Collection.OWNED] != 0]
+        owned_by_extension = df[df[Collection.OWNED] == 1].groupby(Collection.CARD_EXTENSION_CODE).count()
+        group = owned_by_extension[owned_by_extension[Collection.OWNED] != 0]
         return group
 
     def delete_extension(self, json_value):
