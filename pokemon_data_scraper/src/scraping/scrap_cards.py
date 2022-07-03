@@ -1,18 +1,16 @@
-from typing import List, Union, Tuple
+from typing import List, Tuple, Union
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-
 from decouple import config
-from joblib import delayed, Parallel
-
+from joblib import Parallel, delayed
 from tqdm import tqdm
 
-from pokemon_data_scraper.src.scraping.utils.scraping_utils import create_chrome_driver
-from pokemon_data_scraper.src.db.db_schema import CardList
 from pokemon_data_scraper.src.db.db_connector import DBHandler
+from pokemon_data_scraper.src.db.db_schema import CardList
 from pokemon_data_scraper.src.logger.logging import get_logger
+from pokemon_data_scraper.src.scraping.utils.scraping_utils import create_chrome_driver
 
 LOCAL_LOGGER = get_logger("cards-scraper")
 
@@ -22,9 +20,11 @@ def get_all_card_beautifulsoup_threaded(extensions_url: str, extension_code: str
     driver.get(extensions_url)
     bs = BeautifulSoup(driver.page_source, features="html.parser")
     driver.quit()
-    all_cards = bs.find_all('div', class_="card")
+    all_cards = bs.find_all("div", class_="card")
     cards = []
-    r = Parallel(n_jobs=int(config(('THREAD_NUMBER'))), backend="threading")(delayed(process_one_card)(card, index, extension_code) for index, card in enumerate(all_cards))
+    r = Parallel(n_jobs=int(config(("THREAD_NUMBER"))), backend="threading")(
+        delayed(process_one_card)(card, index, extension_code) for index, card in enumerate(all_cards)
+    )
 
     for res in r:
         if res[0] is None:
@@ -32,36 +32,45 @@ def get_all_card_beautifulsoup_threaded(extensions_url: str, extension_code: str
         else:
             cards.append(res)
 
-    return pd.DataFrame(cards, columns=[CardList.CARD_NAME, CardList.CARD_JAPANESE_NAME, CardList.CARD_IMAGE_URL, CardList.CARD_NUMBER,
-                                        CardList.CARD_EXTENSION_CODE, CardList.CARD_RARITY])
+    return pd.DataFrame(
+        cards,
+        columns=[
+            CardList.CARD_NAME,
+            CardList.CARD_JAPANESE_NAME,
+            CardList.CARD_IMAGE_URL,
+            CardList.CARD_NUMBER,
+            CardList.CARD_EXTENSION_CODE,
+            CardList.CARD_RARITY,
+        ],
+    )
 
 
 def process_one_card(card: BeautifulSoup, index: int, extension_code: str) -> Union[List, Tuple[Exception, None]]:
     try:
-        card_page_request = requests.get(config('POKEMON_SCRAPE_URL').replace("/sets", "") + card.find('a')['href'])
+        card_page_request = requests.get(config("POKEMON_SCRAPE_URL").replace("/sets", "") + card.find("a")["href"])
         card_bs = BeautifulSoup(card_page_request.text, features="html.parser")
-        card_info = card_bs.find('div', class_="infoblurb")
-        card_img = card_bs.find('div', class_="card").find('img')['src']
-        card_name = card_bs.find('h1', class_="icon set")
+        card_info = card_bs.find("div", class_="infoblurb")
+        card_img = card_bs.find("div", class_="card").find("img")["src"]
+        card_name = card_bs.find("h1", class_="icon set")
         card_str_name = card_name.contents[1].strip()
 
         dict_card = {}
-        for card_meta in card_info.find_all('div'):
-            val = (card_meta.text.split(": "))
+        for card_meta in card_info.find_all("div"):
+            val = card_meta.text.split(": ")
             dict_card[val[0]] = val[1]
 
         try:
-            card_japanese_name = dict_card['JPN']
+            card_japanese_name = dict_card["JPN"]
         except KeyError:
             card_japanese_name = card_str_name
 
         try:
-            card_rarity = dict_card['Rarity']
+            card_rarity = dict_card["Rarity"]
         except KeyError:
             card_rarity = "UNKNOWN"
 
         try:
-            card_number = int(dict_card['Card'].split('/')[0])
+            card_number = int(dict_card["Card"].split("/")[0])
         except (KeyError, ValueError):
             card_number = index + 1
             LOCAL_LOGGER.error(f"Problem with card (probably an energy), name became {card_str_name} and number is {card_number}")
@@ -75,7 +84,7 @@ def main_card_fetching(reprocess_all: bool = False) -> None:
     """
     Main function to wrap and be called outside.
     """
-    db_handler = DBHandler(config('DB_URL'))
+    db_handler = DBHandler(config("DB_URL"))
 
     LOCAL_LOGGER.info("Starting to process cards")
     for val in tqdm(db_handler.get_all_extensions_url_and_code(reprocess_all=reprocess_all)):
@@ -85,5 +94,5 @@ def main_card_fetching(reprocess_all: bool = False) -> None:
             db_handler.insert_cards(dataframe_cards)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main_card_fetching()

@@ -70,3 +70,44 @@
        left:55%;
        position: absolute;
 }
+
+.btnExport {
+       top:22%;
+       left:15%;
+       position: absolute;
+}
+
+.btnImport {
+       top:22%;
+       left:55%;
+       position: absolute;
+}
+
+#browsebutton {
+    background-color: white;
+}
+
+#my-file-selector {
+    display: none;
+}
+
+.alert {
+  padding: 20px;
+  background-color: #f44336;
+  color: white;
+}
+
+.closebtn {
+  margin-left: 15px;
+  color: white;
+  font-weight: bold;
+  float: right;
+  font-size: 22px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.closebtn:hover {
+  color: black;
+}

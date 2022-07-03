@@ -1,34 +1,22 @@
 {# This simple template derives from ``base.html``. See ``base.html`` for
-    more information about template inheritance. #}
- {%- extends "base.html" %}
- 
- {# Loads some of the macros included with Flask-Bootstrap. We are using the
-    utils module here to automatically render Flask's flashed messages in a
-    bootstrap friendly manner #}
- {% import "bootstrap/utils.html" as utils %}
- 
- {% block styles -%}
- {{super()}} 
- <link rel="stylesheet" type="text/css"
-       href="{{url_for('static', filename='styles/extensions.css')}}">
+more information about template inheritance. #}
+
+{# Loads some of the macros included with Flask-Bootstrap. We are using the
+utils module here to automatically render Flask's flashed messages in a
+bootstrap friendly manner #}
+{% import "bootstrap/utils.html" as utils %}
+
+{% block styles -%}
+<link rel="stylesheet" type="text/css"
+      href="{{url_for('static', filename='styles/extensions.css')}}">
 {% endblock %}
 
- 
- {# Inside the ``content`` is where you should place most of your own stuff.
-    This will keep scripts at the page end and a navbar you add on later
-    intact. #}
- {% block content %}
 
- <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
- <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-
- <div class="container">
-    <p>Pokemon extension: {{ext_name}}, Code: {{ ext_code }}</p>
-     <button type="button" class="btn btn-delete" onclick="deleteExtension('{{ ext_code }}')">
-        Delete this extension
-    </button>
-    <div class="row">
+{# Inside the ``content`` is where you should place most of your own stuff.
+This will keep scripts at the page end and a navbar you add on later
+intact. #}
+{% block content %}
+<div class="row">
        <div>
           <!-- Adding bootstrap table classes to style a table-->
           <table class="table table-hover table-striped text-center">
@@ -36,12 +24,13 @@
                 <tr>
                    <th scope="col">Number</th>
                    <th scope="col">Name</th>
+                    <th scope="col">Extension</th>
                     <th scope="col">Japanese Name</th>
                 </tr>
              </thead>
 
              <tbody class="text-left">
-               {% for odx, row in ext.iterrows() %}
+               {% for odx, row in cards.iterrows() %}
                <tr>
                    <td> <a class="btn" rel="popover" data-img={{ row['cardImageUrl'] }}> {{ row['cardNumber'] }} </a></td>
                    {% if row['owned'] %}
@@ -49,23 +38,17 @@
                    {% else %}
                    <td><input type="checkbox" name="id" onChange="handleChange(this, '{{ row['cardName'] }}', {{ row['cardNumber'] }}, '{{ ext_code }}')"> {{ row['cardName'] }}</td>
                    {% endif %}
+                   <td><a id="extension-title"
+                                                    href="extension/{{ row['cardExtensionCode'] }}_{{ row['extensionName'] }}"
+                                                    target="_blank"> {{ row['extensionName'] }} </a></td>
                    <td> <p>{{ row['cardJapaneseName'] }}</p></td>
                </tr>
                {% endfor %}
              </tbody>
           </table>
-          <button type="button" value="selectAll" class="main" onclick="checkAll()">Select All</button>
-          <button type="button" value="deselectAll" class="main" onclick="uncheckAll()">Clear</button>
        </div>
-    </div>
- </div>
- <div>
-   <p>&nbsp;</p> 
-   <p>&nbsp;</p> 
-   <p>&nbsp;</p> 
- </div>
+</div>
 
- 
 <script>
    $('a[rel=popover]').popover({
    html: true,
@@ -75,24 +58,8 @@
    });
 </script>
 
-<script type="text/javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
- <script type="text/javascript">
-    // Select all check boxes : Setting the checked property to true in checkAll() function
-    function checkAll(){
-      var items = document.getElementsByName('id');
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].type == 'checkbox' && items[i].checked == false)
-                items[i].click();
-        }
-    }
-  // Clear all check boxes : Setting the checked property to false in uncheckAll() function
-    function uncheckAll(){
-      var items = document.getElementsByName('id');
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].type == 'checkbox' && items[i].checked == true)
-               items[i].click();
-        }
-    }
+<script type="text/javascript" src="http://code.jquery.com/jquery-3.4.1/jquery.min.js"></script>
+<script type="text/javascript">
 
       function handleChange(sel, cardName, cardNumber, cardExtensionCode){
              $.ajax({
@@ -114,5 +81,4 @@
              });
          }
  </script>
-
- {%- endblock %}
+{%- endblock %}

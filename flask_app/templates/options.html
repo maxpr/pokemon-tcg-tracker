@@ -14,9 +14,20 @@ bootstrap friendly manner #}
 {% endblock %}
 
 
+<!--{% with messages = get_flashed_messages() %}-->
+<!--  {% if messages %}-->
+<!--    <ul class=flashes>-->
+<!--    {% for message in messages %}-->
+<!--      <li>{{ message }}</li>-->
+<!--    {% endfor %}-->
+<!--    </ul>-->
+<!--  {% endif %}-->
+<!--{% endwith %}-->
+
 {# Inside the ``content`` is where you should place most of your own stuff.
 This will keep scripts at the page end and a navbar you add on later
 intact. #}
+
 {% block content %}
 
 <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
@@ -49,6 +60,8 @@ intact. #}
 
       });
 
+
+
 </script>
 
 <script type=text/javascript>
@@ -69,13 +82,25 @@ intact. #}
                  method: "POST"
              });
        }
+
+
 </script>
+
+{% with messages = get_flashed_messages(category_filter=["error"]) %}
+  {% if messages %}
+    <p>{{ get_flashed_messages(category_filter=["error"]) }}</p>
+<!--    <p>{{ get_flashed_messages(category_filter=["success"]) }}</p>-->
+    <div class="alert">
+    <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+    <strong>Danger!</strong> {{ get_flashed_messages(category_filter=["error"]) }}
+    </div>
+  {% endif %}
+{% endwith %}
 
 <div class="container">
     <button type="button" class="btnExt btn-primary" data-toggle="modal" data-target="#modalExt">
         Launch extensions fetching
     </button>
-
     <div class="modal fade" id="modalExt" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
          aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -93,7 +118,9 @@ intact. #}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button id="extensions-button" type="button" onclick="fetch_extensions()" class="btn btn-primary">Fetch extensions</button>
+                    <button id="extensions-button" type="button" onclick="fetch_extensions()" class="btn btn-primary">
+                        Fetch extensions
+                    </button>
                 </div>
             </div>
         </div>
@@ -123,7 +150,9 @@ intact. #}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button id="cards-button" type="button" onclick="fetch_cards()" class="btn btn-primary">Fetch cards</button>
+                    <button id="cards-button" type="button" onclick="fetch_cards()" class="btn btn-primary">Fetch
+                        cards
+                    </button>
                 </div>
             </div>
         </div>
@@ -132,9 +161,47 @@ intact. #}
 
 
 <div>
-    TODO
-    <button>Export your data</button>
-    <button>Import your data</button>
+    <button type="button" class="btnExport btn-primary"
+            onclick="window.location.href='{{ url_for('frontend.export_data') }}';">Export your owned cards
+    </button>
+</div>
+
+<div class="container">
+    <button type="button" class="btnImport btn-primary" data-toggle="modal" data-target="#modalCardImport">
+        Put the file here to import your cards owned
+    </button>
+
+    <div class="modal fade" id="modalCardImport" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCardImportLabel">Import your exported cards</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form class="form-inline center-block" action="{{ url_for('frontend.uploader') }}" method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        <div class="input-group">
+                            <label id="browsebutton" class="btn btn-default input-group-addon" for="my-file-selector">
+                                {{ form.input_file(id="my-file-selector") }}
+                                Browse...
+                            </label>
+                            <input type="text" class="form-control" readonly>
+                        </div>
+                        {{ form.submit(class_="btn btn-primary") }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {%- endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/inputFileButton.js') }}"></script>
+{% endblock %}

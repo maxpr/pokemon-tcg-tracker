@@ -33,7 +33,6 @@ def get_logger(name: str, level: str = logging.INFO) -> logging.Logger:
     file_handler = logging.FileHandler(path)
     file_handler.setLevel(level)
 
-
     formatter = logging.Formatter(log_format)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)

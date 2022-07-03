@@ -1,0 +1,5 @@
+pylint
+black==22.3
+typed-ast
+isort
+types-pytz
