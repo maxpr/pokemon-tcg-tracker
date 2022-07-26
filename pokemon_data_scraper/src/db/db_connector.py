@@ -178,7 +178,3 @@ class DBHandler:
         filename = f'export_{datetime.now().strftime("%d-%m-%Y %H-%M-%S")}.csv'
         df_to_export.to_csv(f"{file_path}{filename}", index=False)
         return filename
-
-    def import_your_collection(self, file):
-        df = pd.read_csv(file)
-        self.client.execute(f"SELECT * FROM {Collection} INTO OUTFILE '/deploy/import_export_data/export_{datetime.now().strftime('%d/%m/%Y %H:%M')}.csv' FORMAT CSV")

@@ -8,7 +8,7 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 from pokemon_data_scraper.src.db.db_connector import DBHandler
-from pokemon_data_scraper.src.db.db_schema import CardList
+from pokemon_data_scraper.src.db.db_schema import CardList, Extensions
 from pokemon_data_scraper.src.logger.logging import get_logger
 from pokemon_data_scraper.src.scraping.utils.scraping_utils import create_chrome_driver
 
@@ -87,11 +87,21 @@ def main_card_fetching(reprocess_all: bool = False) -> None:
     db_handler = DBHandler(config("DB_URL"))
 
     LOCAL_LOGGER.info("Starting to process cards")
-    for val in tqdm(db_handler.get_all_extensions_url_and_code(reprocess_all=reprocess_all)):
-        LOCAL_LOGGER.info(f"Processing {val[1]}")
+    bar = tqdm(db_handler.get_all_extensions_url_and_code(reprocess_all=reprocess_all))
+    for val in bar:
+        #bar.update()
+        LOCAL_LOGGER.info(f"Processing {val[1]} {bar.n + 1} out of {bar.total}")
         dataframe_cards = get_all_card_beautifulsoup_threaded(val[0], val[1])
         if not dataframe_cards.empty:
             db_handler.insert_cards(dataframe_cards)
+
+        # Rectify the number of card in an extension based on metadata
+        card_number_metadata = db_handler.client.execute(f"SELECT {Extensions.EXTENSION_CARD_NUMBER} FROM {Extensions} where {Extensions.EXTENSION_CODE} = '{val[1]}'")[0][0]
+        actual_card_number = db_handler.client.execute(f"SELECT count(*) FROM {CardList} where {CardList.CARD_EXTENSION_CODE} = '{val[1]}'")[0][0]
+
+        if card_number_metadata != actual_card_number:
+            LOCAL_LOGGER.info(f"Updating extension {val[1]} that had {card_number_metadata} to {actual_card_number}")
+            db_handler.client.execute(f"ALTER TABLE {Extensions} UPDATE {Extensions.EXTENSION_CARD_NUMBER}={actual_card_number} WHERE {Extensions.EXTENSION_CODE}='{val[1]}' ")
 
 
 if __name__ == "__main__":

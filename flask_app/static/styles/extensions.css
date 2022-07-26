@@ -38,3 +38,12 @@ box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 1);
 #extension-title {
     word-wrap: break-word;
 }
+
+.form-control {
+    position: center;
+    width:100%;
+}
+
+.search-div {
+    left: 350px;
+}

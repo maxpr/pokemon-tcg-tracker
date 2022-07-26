@@ -179,6 +179,7 @@ def uploader():
     LOGGER.info(form.errors)
     LOGGER.info(form.input_file.errors)
     LOGGER.info(form.submit.errors)
+    # TODO : actually import the data lol
     if request.method == 'POST' and form.validate_on_submit():
         input_file = request.files['input_file']
         LOGGER.info(input_file)
