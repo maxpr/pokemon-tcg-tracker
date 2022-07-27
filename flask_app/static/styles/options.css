@@ -60,25 +60,25 @@
 }
 
 .btnExt {
-       top:11%;
+       top:22%;
        left:15%;
        position: absolute;
 }
 
 .btnCard {
-       top:11%;
+       top:22%;
        left:55%;
        position: absolute;
 }
 
 .btnExport {
-       top:22%;
+       top:33%;
        left:15%;
        position: absolute;
 }
 
 .btnImport {
-       top:22%;
+       top:33%;
        left:55%;
        position: absolute;
 }

@@ -16,6 +16,7 @@ from wtforms import SubmitField
 
 from nav import nav
 from pokemon_data_scraper.src.db.db_connector import DBHandler
+from pokemon_data_scraper.src.db.db_schema import Collection
 from pokemon_data_scraper.src.logger.logging import LOGGER
 from pokemon_data_scraper.src.scraping.scrap_cards import main_card_fetching
 from pokemon_data_scraper.src.scraping.scrap_extensions import main_computation
@@ -47,7 +48,9 @@ class UploadForm(FlaskForm):
 
 @frontend.route("/")
 def index():
-    return render_template("index.html")
+    client = DBHandler(current_app.config['DB_HOSTNAME'])
+    ownedNumber, total, percent = client.get_full_collection_progress()
+    return render_template("index.html", ownedNumber=ownedNumber, total=total, percentage=percent)
 
 
 @frontend.route("/extensions")
@@ -171,26 +174,19 @@ def export_data():
 
 @frontend.route('/uploader', methods=['POST'])
 def uploader():
-    LOGGER.info(request.files)
+    client = DBHandler(current_app.config['DB_HOSTNAME'])
     form = UploadForm(request.files)
-    LOGGER.info(form)
-    LOGGER.info(form.validate())
-    LOGGER.info(form.input_file)
-    LOGGER.info(form.errors)
-    LOGGER.info(form.input_file.errors)
-    LOGGER.info(form.submit.errors)
     # TODO : actually import the data lol
     if request.method == 'POST' and form.validate_on_submit():
         input_file = request.files['input_file']
         LOGGER.info(input_file)
         df = pd.read_csv(input_file)
-        flash("Your message has been sent. Thank you!", "success")
-        LOGGER.info(df)
-        error = "SUCESS"
+        if set([Collection.CARD_NAME, Collection.CARD_NUMBER, Collection.CARD_EXTENSION_CODE] ).issubset(set(df.columns)) and client.process_import(df):
+            flash("Your export has been treated. Thank you!", "success")
+            LOGGER.info(df)
+        else:
+            flash("The file has not the correct headers! ", "error")
     else:
-        LOGGER.info("IN ELSE")
-        flash("Your message has been sent. Thank you!", "error")
-        error = form.input_file.errors
+        flash("This is not a correct format, or file", "error")
 
-    flash(error)
-    return render_template("options.html", form=UploadForm(), error=error)
+    return render_template("options.html", form=UploadForm())

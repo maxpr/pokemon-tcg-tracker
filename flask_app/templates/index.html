@@ -6,6 +6,13 @@
     utils module here to automatically render Flask's flashed messages in a
     bootstrap friendly manner #}
  {% import "bootstrap/utils.html" as utils %}
+
+ {% block styles -%}
+ {{super()}}
+ <link rel="stylesheet" type="text/css"
+       href="{{url_for('static', filename='styles/app.css')}}">
+{% endblock %}
+
  
  
  {# Inside the ``content`` is where you should place most of your own stuff.
@@ -32,8 +39,15 @@
         href="/extensions" >Go and check your collection</a>
        </p>
      </div>
-       <div>
-           TODO: GENERAL PROGRESS OF YOUR COLLECTION
+       <div class="jumbotron">
+           <h2>General progress of your general collection</h2>
+            <div class="progress">
+                            <!--                    The progress bar text-->
+                            <span class="progress-value" style="font-size: medium;"><strong> {{ ownedNumber }} / {{ total }} </strong></span>
+                            <!--                    The progress bar filling-->
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: {{ percentage }}%; background-color:green;"></div>
+            </div>
        </div>
         <div>
            TODO: GENERAL MONEY OF YOUR COLLECTION

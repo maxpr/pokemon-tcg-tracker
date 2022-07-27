@@ -178,3 +178,46 @@ class DBHandler:
         filename = f'export_{datetime.now().strftime("%d-%m-%Y %H-%M-%S")}.csv'
         df_to_export.to_csv(f"{file_path}{filename}", index=False)
         return filename
+
+    def get_full_collection_progress(self):
+        df = self.client.query_dataframe(
+            f"SELECT {Collection.OWNED} FROM {CardList} as cl LEFT JOIN {Collection} as co "
+            f"ON cl.{CardList.CARD_NAME}=co.{Collection.CARD_NAME} AND"
+            f" cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER} AND"
+            f" cl.{CardList.CARD_EXTENSION_CODE}=co.{Collection.CARD_EXTENSION_CODE}")
+        if df.empty:
+            return 0, 0, 0
+        else:
+            return df['owned'].sum(), df.shape[0], (float(df['owned'].sum())/float(df.shape[0]))
+
+    def process_import(self, df: pd.DataFrame) -> bool:
+        number_row_error = 0
+        df[Collection.CARD_NAME] = df[Collection.CARD_NAME].apply(lambda x: x.replace("'", "''"))
+        # We are going to check every row
+        for idx, row in df.iterrows():
+            LOGGER.info(row[Collection.CARD_NAME])
+            test_df = self.client.query_dataframe(f"""SELECT * FROM {CardList} WHERE 
+            {CardList.CARD_NAME} = '{row[Collection.CARD_NAME]}' 
+            AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]}
+            AND {CardList.CARD_EXTENSION_CODE} = '{row[Collection.CARD_EXTENSION_CODE]}'""")
+            if test_df.empty:
+                number_row_error += 1
+
+        # If more than 10% of the row are not cards, we don't insert and return an error
+        if (number_row_error / df.shape[0]) * 100 > 10:
+            return False
+        else:
+            # If exist update, else insert
+            for idx, row in df.iterrows():
+                if not self.client.query_dataframe(f"""SELECT * FROM {Collection} WHERE 
+                            {CardList.CARD_NAME} = '{row[Collection.CARD_NAME]}' 
+                            AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]}
+                            AND {CardList.CARD_EXTENSION_CODE} = '{row[Collection.CARD_EXTENSION_CODE]}'""").empty:
+                    self.client.execute(f"""ALTER TABLE {Collection} UPDATE {Collection.OWNED} = {row[{Collection.OWNED}]} WHERE 
+                            {CardList.CARD_NAME} = '{row[Collection.CARD_NAME]}' 
+                            AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]}
+                            AND {CardList.CARD_EXTENSION_CODE} = '{row[Collection.CARD_EXTENSION_CODE]}'""")
+                else:
+                    self.client.execute(f"INSERT INTO {Collection} VALUES", row.to_dict(), types_check=True)
+            return True
+

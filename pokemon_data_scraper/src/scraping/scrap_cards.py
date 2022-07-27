@@ -89,7 +89,6 @@ def main_card_fetching(reprocess_all: bool = False) -> None:
     LOCAL_LOGGER.info("Starting to process cards")
     bar = tqdm(db_handler.get_all_extensions_url_and_code(reprocess_all=reprocess_all))
     for val in bar:
-        #bar.update()
         LOCAL_LOGGER.info(f"Processing {val[1]} {bar.n + 1} out of {bar.total}")
         dataframe_cards = get_all_card_beautifulsoup_threaded(val[0], val[1])
         if not dataframe_cards.empty:
