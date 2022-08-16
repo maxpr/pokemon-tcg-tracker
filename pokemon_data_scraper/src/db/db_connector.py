@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Dict
 
 import pandas as pd
 import pytz
@@ -9,9 +9,27 @@ from pokemon_data_scraper.src.db.db_schema import CardList, Collection, Extensio
 from pokemon_data_scraper.src.logger.logging import LOGGER
 
 
+escape_chars_map = {
+    "\b": "\\b",
+    "\f": "\\f",
+    "\r": "\\r",
+    "\n": "\\n",
+    "\t": "\\t",
+    "\0": "\\0",
+    "\a": "\\a",
+    "\v": "\\v",
+    "\\": "\\\\",
+    "'": "\\'"
+}
+
+
 class DBHandler:
     def __init__(self, domain: str):
         self.client = Client(domain)
+
+    @staticmethod
+    def __escape_values(value: str):
+        return ''.join(escape_chars_map.get(c, c) for c in value)
 
     def list_already_present_extensions(self):
         """Return the extensions code already present in the database.
@@ -59,7 +77,7 @@ class DBHandler:
         self.client.execute(f"INSERT INTO {CardList} VALUES", dataframe.to_dict("records"), types_check=True)
         self.client.execute(f"OPTIMIZE TABLE {CardList} FINAL DEDUPLICATE")
 
-    def insert_owned_card(self, json_value):
+    def insert_owned_card(self, json_value: Dict) -> None:
         # Escaping single quote
         escaped_name = json_value[Collection.CARD_NAME].replace("'", "''")
         if (
@@ -94,13 +112,13 @@ class DBHandler:
         """
         return [val[0] for val in self.client.execute(f"SELECT MAX({Extensions.EXTENSION_RELEASE_DATE}) FROM {Extensions}")][0]
 
-    def get_all_extensions_for_ui(self, value):
+    def get_all_extensions_for_ui(self, value: str) -> pd.DataFrame:
         # TODO: Escape the value lol
         if value != "":
             df_ext = self.client.query_dataframe(
                 f"SELECT  {Extensions.EXTENSION_NAME}, {Extensions.EXTENSION_CODE},{Extensions.EXTENSION_IMAGE_URL},"
                 f" {Extensions.EXTENSION_CARD_NUMBER}, {Extensions.EXTENSION_RELEASE_DATE} FROM {Extensions}"
-                f" WHERE {Extensions.EXTENSION_CODE} ILIKE '%{value}%' OR {Extensions.EXTENSION_NAME} ILIKE '%{value}%'"
+                f" WHERE {Extensions.EXTENSION_CODE} ILIKE '%{self.__escape_values(value)}%' OR {Extensions.EXTENSION_NAME} ILIKE '%{self.__escape_values(value)}%'"
                 f"ORDER BY {Extensions.EXTENSION_RELEASE_DATE} DESCENDING"
             )
         else:
@@ -119,14 +137,14 @@ class DBHandler:
             df_ext["percentage"] = df_ext["ownedNumber"] * 100 / df_ext["extensionCardNumber"]
         return df_ext
 
-    def get_all_cards_for_ui(self, value):
+    def get_all_cards_for_ui(self, value: str) -> pd.DataFrame:
         # TODO: Escape the value lol
         if value != "":
             df_cards = self.client.query_dataframe(
                 f"SELECT  {CardList.CARD_NAME}, {CardList.CARD_NUMBER},{CardList.CARD_JAPANESE_NAME},"
                 f" {CardList.CARD_EXTENSION_CODE}, {CardList.CARD_IMAGE_URL} , {Extensions.EXTENSION_NAME} "
                 f"FROM {CardList} LEFT JOIN {Extensions} ON {Extensions.EXTENSION_CODE} = {CardList.CARD_EXTENSION_CODE}"
-                f" WHERE {CardList.CARD_NAME} ILIKE '%{value}%' OR {CardList.CARD_JAPANESE_NAME} ILIKE '%{value}%'"
+                f" WHERE {CardList.CARD_NAME} ILIKE '%{self.__escape_values(value)}%' OR {CardList.CARD_JAPANESE_NAME} ILIKE '%{self.__escape_values(value)}%'"
                 f" ORDER BY {CardList.CARD_NAME} DESCENDING LIMIT 100"
             )
         else:
@@ -195,29 +213,29 @@ class DBHandler:
         df[Collection.CARD_NAME] = df[Collection.CARD_NAME].apply(lambda x: x.replace("'", "''"))
         # We are going to check every row
         for idx, row in df.iterrows():
-            LOGGER.info(row[Collection.CARD_NAME])
             test_df = self.client.query_dataframe(f"""SELECT * FROM {CardList} WHERE 
             {CardList.CARD_NAME} = '{row[Collection.CARD_NAME]}' 
-            AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]}
+            AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]} 
             AND {CardList.CARD_EXTENSION_CODE} = '{row[Collection.CARD_EXTENSION_CODE]}'""")
             if test_df.empty:
                 number_row_error += 1
 
         # If more than 10% of the row are not cards, we don't insert and return an error
         if (number_row_error / df.shape[0]) * 100 > 10:
+            LOGGER.error("We have too much error")
             return False
         else:
             # If exist update, else insert
             for idx, row in df.iterrows():
                 if not self.client.query_dataframe(f"""SELECT * FROM {Collection} WHERE 
                             {CardList.CARD_NAME} = '{row[Collection.CARD_NAME]}' 
-                            AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]}
+                            AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]} 
                             AND {CardList.CARD_EXTENSION_CODE} = '{row[Collection.CARD_EXTENSION_CODE]}'""").empty:
-                    self.client.execute(f"""ALTER TABLE {Collection} UPDATE {Collection.OWNED} = {row[{Collection.OWNED}]} WHERE 
-                            {CardList.CARD_NAME} = '{row[Collection.CARD_NAME]}' 
-                            AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]}
-                            AND {CardList.CARD_EXTENSION_CODE} = '{row[Collection.CARD_EXTENSION_CODE]}'""")
+                    self.client.execute(f"""ALTER TABLE {Collection} UPDATE {Collection.OWNED} = {row[Collection.OWNED]}
+                            WHERE {CardList.CARD_NAME} = '{row[Collection.CARD_NAME]}' 
+                             AND {CardList.CARD_NUMBER} = {row[Collection.CARD_NUMBER]} 
+                             AND {CardList.CARD_EXTENSION_CODE} = '{row[Collection.CARD_EXTENSION_CODE]}'""")
                 else:
-                    self.client.execute(f"INSERT INTO {Collection} VALUES", row.to_dict(), types_check=True)
+                    self.client.execute(f"INSERT INTO {Collection} VALUES", [row.to_dict()], types_check=True)
             return True
 

@@ -176,12 +176,11 @@ def export_data():
 def uploader():
     client = DBHandler(current_app.config['DB_HOSTNAME'])
     form = UploadForm(request.files)
-    # TODO : actually import the data lol
     if request.method == 'POST' and form.validate_on_submit():
         input_file = request.files['input_file']
         LOGGER.info(input_file)
         df = pd.read_csv(input_file)
-        if set([Collection.CARD_NAME, Collection.CARD_NUMBER, Collection.CARD_EXTENSION_CODE] ).issubset(set(df.columns)) and client.process_import(df):
+        if set([Collection.CARD_NAME, Collection.CARD_NUMBER, Collection.CARD_EXTENSION_CODE]).issubset(set(df.columns)) and client.process_import(df):
             flash("Your export has been treated. Thank you!", "success")
             LOGGER.info(df)
         else:
