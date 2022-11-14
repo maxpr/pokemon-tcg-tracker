@@ -139,14 +139,14 @@ def create_db_queries() -> List[str]:
         {Extensions.EXTENSION_URL} String,
         {Extensions.EXTENSION_IMAGE_URL}  String,
         {Extensions.EXTENSION_RELEASE_DATE}  DateTime('Asia/Singapore'),
-        {Extensions.EXTENSION_CARD_NUMBER}  UInt8
+        {Extensions.EXTENSION_CARD_NUMBER}  UInt16
     ) ENGINE = ReplacingMergeTree()
     ORDER BY ({Extensions.SERIE_NAME} ,{Extensions.EXTENSION_NAME})""",
         f"""CREATE TABLE IF NOT EXISTS {CardList}(
         {CardList.CARD_NAME} String,
         {CardList.CARD_JAPANESE_NAME} String,
         {CardList.CARD_EXTENSION_CODE} String,
-        {CardList.CARD_NUMBER} UInt8,
+        {CardList.CARD_NUMBER} UInt16,
         {CardList.CARD_IMAGE_URL} String,
         {CardList.CARD_RARITY} String
     ) ENGINE = ReplacingMergeTree()

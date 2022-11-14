@@ -152,7 +152,11 @@ def get_extension_beautifulsoup_threading(extension_bs: BeautifulSoup, serie: st
 
     :return: List of feature for this extension.
     """
-    ext_code = extension_bs["name"]
+    # They are retarded
+    if extension_bs["href"] == '/Lost-Abyss-Expansion/':
+        ext_code = 'S11'
+    else:
+        ext_code = extension_bs["name"]
     if ext_code not in current_ext_list:
         ext_url = extension_bs["href"]
         ext_name = extension_bs["title"]
@@ -186,6 +190,7 @@ def get_extension_metadata_beautifulsoup(ext_url: str) -> Tuple[datetime, int]:
         # Actually this is incorrect
         card_number = sum([int(re.sub(r"[^0-9]", "", t)) for t in card_number_str])
 
+        LOCAL_LOGGER.info(f"Card number {card_number} and {card_number_str}")
         date = " ".join(card_metadata.split("\n")[-4:]).strip()
         date_of_release = timestring.Date(date).date
         date_of_release = date_of_release.replace(tzinfo=pytz.timezone("Asia/Singapore"))

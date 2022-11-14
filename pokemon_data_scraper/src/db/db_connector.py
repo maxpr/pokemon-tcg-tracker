@@ -162,7 +162,7 @@ class DBHandler:
     def get_card_list_for_extension(self, extension_code: str):
         df = self.client.query_dataframe(
             f"SELECT {CardList.CARD_NAME}, {CardList.CARD_JAPANESE_NAME}, {CardList.CARD_NUMBER}, {CardList.CARD_RARITY}, {CardList.CARD_IMAGE_URL}, {Collection.OWNED}"
-            f" FROM {CardList} as cl LEFT JOIN {Collection} as co ON cl.{CardList.CARD_NAME}=co.{Collection.CARD_NAME} AND cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER}"
+            f" FROM {CardList} as cl LEFT JOIN {Collection} as co ON cl.{CardList.CARD_NAME}=co.{Collection.CARD_NAME} AND cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER} AND cl.{CardList.CARD_EXTENSION_CODE} = co.{CardList.CARD_EXTENSION_CODE}"
             f" where {CardList.CARD_EXTENSION_CODE} = '{extension_code}' ORDER BY {CardList.CARD_NUMBER} ASCENDING"
         )
         df[CardList.CARD_NAME] = df[CardList.CARD_NAME].apply(lambda x: x.replace("'", "\\'"))
