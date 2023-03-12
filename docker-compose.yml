@@ -13,18 +13,20 @@ services:
       - "8000:8000"
     command: python wsgi.py
 
-  nginx:
-    restart: always
-    build: ./nginx
-    ports:
-      - "80:80"
-    depends_on:
-      - flask_app
+      #nginx:
+      #restart: always
+      #build: ./nginx
+      #ports:
+      #- "80:80"
+      #depends_on:
+      #- flask_app
 
   db_server:
-    image: yandex/clickhouse-server:21.8
+    image: altinity/clickhouse-server:21.12.3.32.altinitydev.arm
+    platform: linux/arm64
     volumes:
       - ./database/db_data:/var/lib/clickhouse
+    restart: always
     ports:
       - "8123:8123"
       - "9000:9000"
