@@ -35,9 +35,9 @@ intact. #}
                <tr>
                    <td> <a class="btn" rel="popover" data-img={{ row['cardImageUrl'] }}> {{ row['cardNumber'] }} </a></td>
                    {% if row['owned'] %}
-                   <td><input type="checkbox" name="id" onChange="handleChange(this, '{{ row['cardName'] }}', {{ row['cardNumber'] }}, '{{ ext_code }}')" checked> {{ row['cardName'] }}</td>
+                   <td><input type="checkbox" name="id" onChange="handleChange(this, '{{ row['cardName'] }}', {{ row['cardNumber'] }}, '{{ row['cardExtensionCode'] }}')" checked> {{ row['cardName'] }}</td>
                    {% else %}
-                   <td><input type="checkbox" name="id" onChange="handleChange(this, '{{ row['cardName'] }}', {{ row['cardNumber'] }}, '{{ ext_code }}')"> {{ row['cardName'] }}</td>
+                   <td><input type="checkbox" name="id" onChange="handleChange(this, '{{ row['cardName'] }}', {{ row['cardNumber'] }}, '{{ row['cardExtensionCode'] }}')"> {{ row['cardName'] }}</td>
                    {% endif %}
                    <td><a id="extension-title"
                                                     href="extension/{{ row['cardExtensionCode'] }}_{{ row['extensionName'] }}"
@@ -60,6 +60,7 @@ intact. #}
 </script>
 
 <script type="text/javascript" src="http://code.jquery.com/jquery-3.4.1/jquery.min.js"></script>
+
 <script type="text/javascript">
 
       function handleChange(sel, cardName, cardNumber, cardExtensionCode){
@@ -76,8 +77,7 @@ intact. #}
                  url: "{{ url_for('frontend.data_post') }}",
                  method: "POST",
                  contentType: "application/json",
-                 dataType: 'json',
-                 data: JSON.stringify( {"cardName": cardName, "cardNumber": cardNumber, "cardExtensionCode": cardExtensionCode, "owned": sel.checked})
+                 dataType: 'json',                 data: JSON.stringify( {"cardName": cardName, "cardNumber": cardNumber, "cardExtensionCode": cardExtensionCode, "owned": sel.checked})
              });
          }
 
