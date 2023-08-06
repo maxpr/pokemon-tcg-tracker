@@ -77,7 +77,7 @@ def extension_details(name_code: str):
 @frontend.route("/data_post", methods=["POST"])
 def data_post():
     # handle your database access, etc.
-    LOGGER.debug(f"Request is {request.json}")
+    LOGGER.error(f"Request is {request.json}")
     client = DBHandler(current_app.config['DB_HOSTNAME'])
     client.insert_owned_card(request.json)
     return "received"

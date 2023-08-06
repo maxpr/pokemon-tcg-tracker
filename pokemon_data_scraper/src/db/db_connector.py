@@ -92,7 +92,7 @@ class DBHandler:
             > 0
         ):
             LOGGER.error("UPDATE with name")
-            LOGGER.debug(json_value[Collection.CARD_NAME])
+            LOGGER.error(json_value[Collection.CARD_NAME])
             self.client.execute(
                 f"ALTER TABLE {Collection} UPDATE {Collection.OWNED}={int(json_value[Collection.OWNED])} "
                 f"WHERE {Collection.CARD_NAME}='{escaped_name}' AND"
@@ -141,21 +141,27 @@ class DBHandler:
         # TODO: Escape the value lol
         if value != "":
             df_cards = self.client.query_dataframe(
-                f"SELECT  {CardList.CARD_NAME}, {CardList.CARD_NUMBER},{CardList.CARD_JAPANESE_NAME},"
-                f" {CardList.CARD_EXTENSION_CODE}, {CardList.CARD_IMAGE_URL} , {Extensions.EXTENSION_NAME} "
-                f"FROM {CardList} LEFT JOIN {Extensions} ON {Extensions.EXTENSION_CODE} = {CardList.CARD_EXTENSION_CODE}"
-                f" WHERE {CardList.CARD_NAME} ILIKE '%{self.__escape_values(value)}%' OR {CardList.CARD_JAPANESE_NAME} ILIKE '%{self.__escape_values(value)}%'"
-                f" ORDER BY {CardList.CARD_NAME} DESCENDING LIMIT 100"
+                f"SELECT  cl.{CardList.CARD_NAME}, cl.{CardList.CARD_NUMBER},cl.{CardList.CARD_JAPANESE_NAME},"
+                f" cl.{CardList.CARD_EXTENSION_CODE}, cl.{CardList.CARD_IMAGE_URL} , {Extensions.EXTENSION_NAME}, co.{Collection.OWNED} "
+                f"FROM {CardList} as cl LEFT JOIN {Extensions} ON {Extensions.EXTENSION_CODE} = cl.{CardList.CARD_EXTENSION_CODE} "
+                f"LEFT JOIN {Collection} as co ON cl.{CardList.CARD_NAME}= co.{Collection.CARD_NAME} AND cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER} AND cl.{CardList.CARD_EXTENSION_CODE} = co.{CardList.CARD_EXTENSION_CODE}"
+                f" WHERE cl.{CardList.CARD_NAME} ILIKE '%{self.__escape_values(value)}%' OR cl.{CardList.CARD_JAPANESE_NAME} ILIKE '%{self.__escape_values(value)}%'"
+                f" ORDER BY cl.{CardList.CARD_NAME} DESCENDING LIMIT 100"
             )
+            
         else:
             df_cards = self.client.query_dataframe(
-                f"SELECT  {CardList.CARD_NAME}, {CardList.CARD_NUMBER},{CardList.CARD_JAPANESE_NAME},"
-                f" {CardList.CARD_EXTENSION_CODE}, {CardList.CARD_IMAGE_URL} , {Extensions.EXTENSION_NAME} "
-                f"FROM {CardList} LEFT JOIN {Extensions} ON {Extensions.EXTENSION_CODE} = {CardList.CARD_EXTENSION_CODE}"
-                f" ORDER BY {CardList.CARD_NAME} DESCENDING LIMIT 100"
+                f"SELECT  cl.{CardList.CARD_NAME}, cl.{CardList.CARD_NUMBER},cl.{CardList.CARD_JAPANESE_NAME},"
+                f" cl.{CardList.CARD_EXTENSION_CODE}, cl.{CardList.CARD_IMAGE_URL} , {Extensions.EXTENSION_NAME}, co.{Collection.OWNED} "
+                f"FROM {CardList} as cl LEFT JOIN {Extensions} ON {Extensions.EXTENSION_CODE} = cl.{CardList.CARD_EXTENSION_CODE} "
+                f"LEFT JOIN {Collection} as co ON cl.{CardList.CARD_NAME}= co.{Collection.CARD_NAME} AND cl.{CardList.CARD_NUMBER}=co.{Collection.CARD_NUMBER} AND cl.{CardList.CARD_EXTENSION_CODE} = co.{CardList.CARD_EXTENSION_CODE}"
+                f" ORDER BY cl.{CardList.CARD_NAME} DESCENDING LIMIT 100"
             )
 
         if not df_cards.empty:
+            df_cards.columns = df_cards.columns.str.removeprefix("cl_")
+            df_cards.columns = df_cards.columns.str.removeprefix("co_")
+            LOGGER.info(df_cards.columns)
             df_cards[CardList.CARD_NAME] = df_cards[CardList.CARD_NAME].apply(lambda x: x.replace("'", "\\'"))
         return df_cards
 
